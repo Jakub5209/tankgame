@@ -31,7 +31,7 @@ const config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 0 },
-            debug: false
+            debug: true
         }
     },
     scene: {
@@ -854,4 +854,5 @@ function createDetailedGraphics(scene) {
 
 function drawTankModel(g, darkColor, lightColor) {
     g.clear(); g.fillStyle(0x111111, 1); g.fillRect(0, 0, 40, 8); g.fillRect(0, 32, 40, 8); g.fillStyle(darkColor, 1); g.fillRect(4, 8, 32, 24); g.fillStyle(lightColor, 1); g.fillCircle(20, 20, 9); g.fillStyle(0x222222, 1); g.fillRect(24, 16, 16, 8);
+
 }
