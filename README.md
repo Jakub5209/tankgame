@@ -38,7 +38,7 @@ Ponieważ projekt jest oparty na HTML5 i JavaScript (Phaser 3), wymaga serwera l
 
 1.  **Sklonuj Repozytorium:**
     ```bash
-    git clone [[LINK DO TWOJEGO REPOZYTORIUM]](https://github.com/Jakub5209/tankgame)
+    git clone https://github.com/Jakub5209/tankgame
     ```
 2.  **Uruchom Serwer Lokalny:**
     * Jeśli używasz **VS Code**, zainstaluj rozszerzenie "Live Server".
