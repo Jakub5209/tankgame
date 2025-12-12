@@ -1,4 +1,4 @@
-# 💥 Tactical Tank Battle 2D 🛡️
+# 💥 Tactical Duels *Friday Edition* 🛡️
 
 Wciągająca, lokalna gra multiplayer 1 vs 1, inspirowana klasycznymi bitwami czołgów z elementami power-upów i dynamicznymi mapami, stworzona przy użyciu frameworka Phaser 3.
 
