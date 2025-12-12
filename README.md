@@ -38,7 +38,7 @@ Ponieważ projekt jest oparty na HTML5 i JavaScript (Phaser 3), wymaga serwera l
 
 1.  **Sklonuj Repozytorium:**
     ```bash
-    git clone [LINK DO TWOJEGO REPOZYTORIUM]
+    git clone [[LINK DO TWOJEGO REPOZYTORIUM]](https://github.com/Jakub5209/tankgame)
     ```
 2.  **Uruchom Serwer Lokalny:**
     * Jeśli używasz **VS Code**, zainstaluj rozszerzenie "Live Server".
@@ -51,5 +51,3 @@ Ponieważ projekt jest oparty na HTML5 i JavaScript (Phaser 3), wymaga serwera l
 Większość obiektów w grze (czołgi, pociski, ściany, power-upy) jest generowana dynamicznie za pomocą metody `scene.make.graphics()` i konwertowana na tekstury. Umożliwia to łatwe kolorowanie i modyfikację w locie.
 
 ---
-
-**Licencja:** [Jeśli masz licencję, dodaj ją tutaj, np. MIT]
