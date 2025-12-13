@@ -72,9 +72,9 @@ let playerData = {
 
 // Definicje kosztów i wartości
 const UPGRADES = {
-    rateCost: 50,
-    hpCost: 100,
-    colorCost: 200,
+    rateCost: 1,
+    hpCost: 2,
+    colorCost: 2,
     maxRateLvl: 5,
     maxHp: 3,
     baseFireRate: 600, // ms (im mniej tym szybciej)
@@ -947,4 +947,5 @@ function setupInputs(scene) {
         space: Phaser.Input.Keyboard.KeyCodes.SPACE,
         shift: Phaser.Input.Keyboard.KeyCodes.SHIFT
     });
+
 }
