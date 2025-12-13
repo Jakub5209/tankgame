@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tank Duels ⭐</title>
+    <title>Tank Duels</title>
     <link rel="stylesheet" href="style.css">
     <link rel="shortcut icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
@@ -19,18 +19,18 @@
             <div class="shop-coins">Coins: <span id="shop-coins-red">0</span></div>
 
             <div class="upgrade-item">
-                <label>Fire Rate (Lvl <span id="lvl-rate-red">0</span>/5)</label>
+                <label>Szybkostrzelność (Lvl <span id="lvl-rate-red">0</span>/5)</label>
                 <div class="bar-container"><div id="bar-rate-red" class="bar-fill" style="width:0%"></div></div>
-                <button class="buy-btn" onclick="buyUpgrade('red', 'rate')">UPGRADE (1$)</button>
+                <button class="buy-btn" id="buy-rate-red" onclick="buyUpgrade('red', 'rate')">UPGRADE (10$)</button>
             </div>
 
             <div class="upgrade-item">
                 <label>Max HP (<span id="val-hp-red">1</span>/3 ❤️)</label>
-                <button class="buy-btn" onclick="buyUpgrade('red', 'hp')">ADD HEART (2$)</button>
+                <button class="buy-btn" id="buy-hp-red" onclick="buyUpgrade('red', 'hp')">UPGRADE (20$)</button>
             </div>
 
             <div class="upgrade-item">
-                <label>Paint Job</label>
+                <label>Malowanie</label>
                 <div class="color-grid" id="colors-red">
                     </div>
             </div>
@@ -66,18 +66,18 @@
             <div class="shop-coins">Coins: <span id="shop-coins-blue">0</span></div>
 
              <div class="upgrade-item">
-                <label>Fire Rate (Lvl <span id="lvl-rate-blue">0</span>/5)</label>
+                <label>Szybkostrzelność (Lvl <span id="lvl-rate-blue">0</span>/5)</label>
                 <div class="bar-container"><div id="bar-rate-blue" class="bar-fill" style="width:0%"></div></div>
-                <button class="buy-btn" onclick="buyUpgrade('blue', 'rate')">UPGRADE (1$)</button>
+                <button class="buy-btn" id="buy-rate-blue" onclick="buyUpgrade('blue', 'rate')">UPGRADE (10$)</button>
             </div>
 
             <div class="upgrade-item">
                 <label>Max HP (<span id="val-hp-blue">1</span>/3 ❤️)</label>
-                <button class="buy-btn" onclick="buyUpgrade('blue', 'hp')">ADD HEART (2$)</button>
+                <button class="buy-btn" id="buy-hp-blue" onclick="buyUpgrade('blue', 'hp')">UPGRADE (20$)</button>
             </div>
 
             <div class="upgrade-item">
-                <label>Paint Job</label>
+                <label>Malowanie</label>
                 <div class="color-grid" id="colors-blue">
                     </div>
             </div>
@@ -107,6 +107,4 @@
     <script src="maps.js"></script>
     <script src="game.js"></script>
 </body>
-
 </html>
-

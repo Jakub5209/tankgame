@@ -258,3 +258,29 @@ button:hover { background: #555; border-color: #777; }
 .stat-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 8px 0; font-size: 14px; }
 .red-txt { color: #ff5555; }
 .blue-txt { color: #5555ff; }
+
+
+/* --- EFEKTY SKLEPU (PARTICLES) --- */
+.shop-particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background-color: gold;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1000;
+    animation: pop-fade 0.8s ease-out forwards;
+}
+
+@keyframes pop-fade {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+}
+
+/* Styl dla wyszarzonego/maksymalnego przycisku */
+.buy-btn:disabled {
+    background: #222;
+    color: #888;
+    border-color: #333;
+    cursor: not-allowed;
+}

@@ -18,7 +18,7 @@ const audioPaths = {
     
     // Muzyka
     menuMusic:        ['audio/menu.mp3'], // Muzyka w menu głównym
-    gameMusic:        ['audio/game.mp3']  // Muzyka podczas walki
+    gameMusic:        ['audio/game.mp3', 'audio/game2.mp3']  // Muzyka podczas walki
 };
 
 const config = {
@@ -72,9 +72,9 @@ let playerData = {
 
 // Definicje kosztów i wartości
 const UPGRADES = {
-    rateCost: 1,
-    hpCost: 2,
-    colorCost: 2,
+    rateCost: 10,
+    hpCost: 20,
+    colorCost: 25,
     maxRateLvl: 5,
     maxHp: 3,
     baseFireRate: 600, // ms (im mniej tym szybciej)
@@ -84,7 +84,7 @@ const UPGRADES = {
 // Palety kolorów do kupienia
 const PALETTES = {
     red: [0xff5555, 0xff0000, 0xff00ff, 0x800000, 0xffa500],
-    blue: [0x5555ff, 0x0000ff, 0x00ffff, 0x000080, 0x008080]
+    blue: [0x5555ff, 0x0000ff, 0x00ffff, 0x2abd84, 0x10e325]
 };
 
 // --- ŁADOWANIE I ZAPIS (LOCAL STORAGE) ---
@@ -193,15 +193,33 @@ function updateShopUI() {
         // Coins
         document.getElementById(`shop-coins-${who}`).innerText = data.coins;
         
-        // Fire Rate
+        // --- Obsługa Fire Rate ---
+        const rateBtn = document.getElementById(`buy-rate-${who}`); // Używamy unikalnego ID
         document.getElementById(`lvl-rate-${who}`).innerText = data.fireRateLvl;
         const percent = (data.fireRateLvl / UPGRADES.maxRateLvl) * 100;
         document.getElementById(`bar-rate-${who}`).style.width = `${percent}%`;
 
-        // HP
+        if (data.fireRateLvl >= UPGRADES.maxRateLvl) {
+            rateBtn.innerText = "MAX POZIOM";
+            rateBtn.disabled = true;
+        } else {
+            rateBtn.innerText = `UPGRADE (${UPGRADES.rateCost}$)`;
+            rateBtn.disabled = false;
+        }
+
+        // --- Obsługa HP ---
+        const hpBtn = document.getElementById(`buy-hp-${who}`);
         document.getElementById(`val-hp-${who}`).innerText = data.maxHp;
 
-        // Kolory (Style klas)
+        if (data.maxHp >= UPGRADES.maxHp) {
+            hpBtn.innerText = "MAX HP";
+            hpBtn.disabled = true;
+        } else {
+            hpBtn.innerText = `UPGRADE (${UPGRADES.hpCost}$)`;
+            hpBtn.disabled = false;
+        }
+
+        // Kolory
         PALETTES[who].forEach(col => {
             const box = document.getElementById(`col-${who}-${col}`);
             const isOwned = data.ownedColors.includes(col);
@@ -212,7 +230,6 @@ function updateShopUI() {
             if (isOwned) box.classList.add('owned');
             else box.classList.add('locked');
             
-            // Tooltip z ceną dla zablokowanych
             if(!isOwned) box.title = `Kup: ${UPGRADES.colorCost} coins`;
             else box.title = "Wybierz";
         });
@@ -221,40 +238,72 @@ function updateShopUI() {
 
 function buyUpgrade(who, type) {
     const data = playerData[who];
+    // Pobieramy element przycisku z eventu (window.event działa w inline onclick)
+    const btn = window.event.currentTarget; 
     
     if (type === 'rate') {
         if (data.fireRateLvl < UPGRADES.maxRateLvl && data.coins >= UPGRADES.rateCost) {
             data.coins -= UPGRADES.rateCost;
             data.fireRateLvl++;
             saveData();
+            triggerShopConfetti(btn, '#00e676'); // Zielone konfetti
         }
     } else if (type === 'hp') {
         if (data.maxHp < UPGRADES.maxHp && data.coins >= UPGRADES.hpCost) {
             data.coins -= UPGRADES.hpCost;
             data.maxHp++;
             saveData();
+            triggerShopConfetti(btn, '#ff5555'); // Czerwone konfetti
         }
     }
 }
 
 function tryBuyOrSelectColor(who, colorInt) {
     const data = playerData[who];
-    
-    // 1. Jeśli już mamy, wybieramy
+    const box = window.event.currentTarget;
+
     if (data.ownedColors.includes(colorInt)) {
         data.color = colorInt;
         saveData();
         return;
     }
 
-    // 2. Jeśli nie mamy, próbujemy kupić
     if (data.coins >= UPGRADES.colorCost) {
         data.coins -= UPGRADES.colorCost;
         data.ownedColors.push(colorInt);
         data.color = colorInt;
         saveData();
+        // Konfetti w kolorze kupionego skina
+        triggerShopConfetti(box, '#' + colorInt.toString(16).padStart(6, '0')); 
     } else {
         alert("Za mało monet!");
+    }
+}
+
+// Funkcja tworząca efekt cząsteczek w DOM (HTML)
+function triggerShopConfetti(element, color = 'gold') {
+    const rect = element.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    for (let i = 0; i < 20; i++) {
+        const p = document.createElement('div');
+        p.className = 'shop-particle';
+        p.style.left = centerX + 'px';
+        p.style.top = centerY + 'px';
+        p.style.backgroundColor = color;
+        
+        // Losowy kierunek
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = 30 + Math.random() * 50;
+        const tx = Math.cos(angle) * velocity + 'px';
+        const ty = Math.sin(angle) * velocity + 'px';
+        
+        p.style.setProperty('--tx', tx);
+        p.style.setProperty('--ty', ty);
+
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 800);
     }
 }
 
@@ -417,6 +466,24 @@ function update(time, delta) {
     missiles.getChildren().forEach(missile => {
         if(missile.active) updateMissileLogic(missile, time);
     });
+
+    [player1, player2].forEach(p => {
+        if (p.active) {
+            const hearts = p.getData('activeHearts');
+            if (hearts && hearts.length > 0) {
+                // Wyliczamy środek, żeby serca były wycentrowane nad czołgiem
+                const count = hearts.length;
+                const spacing = 20;
+                const totalWidth = (count - 1) * spacing;
+                const startX = p.x - (totalWidth / 2);
+                
+                hearts.forEach((h, index) => {
+                    h.x = startX + (index * spacing);
+                    h.y = p.y - 40; // 40 pikseli nad czołgiem
+                });
+            }
+        }
+    });
 }
 
 // --- FIZYKA I LOGIKA HP ---
@@ -498,13 +565,12 @@ function handleHit(player, bullet) {
     if (player.getData('hasShield')) {
         playSound(scene, 'ricochet');
         createSparks(player.x, player.y, 0x00ffff);
-        if (bullet.body) { // Odbicie pocisku
+        if (bullet.body) { 
             bullet.body.velocity.x *= -1.5; bullet.body.velocity.y *= -1.5;
         }
         return;
     }
 
-    // Usuń pocisk
     if (bullet.active && bullet.disableBody) recycleBullet(bullet);
 
     // LOGIKA ŻYCIA (HP)
@@ -514,8 +580,14 @@ function handleHit(player, bullet) {
 
     playSound(scene, 'explosion');
 
+    // BUGFIX: Usuwamy stare serca natychmiast, jeśli jakieś są
+    const oldHearts = player.getData('activeHearts');
+    if (oldHearts) {
+        oldHearts.forEach(h => h.destroy());
+        player.setData('activeHearts', null);
+    }
+
     if (hp <= 0) {
-        // Śmierć
         createTankExplosion(player.x, player.y);
         player.body.enable = false; 
         if(player.getData('shieldVisual')) player.getData('shieldVisual').destroy();
@@ -529,29 +601,35 @@ function handleHit(player, bullet) {
             }
         });
     } else {
-        // Obrażenia (przeżył)
         createSparks(player.x, player.y, 0xff0000);
-        showHearts(scene, player, hp);
-        // Efekt migania (invulnerable na chwilę)
+        showHearts(scene, player, hp); // Wyświetlamy nowe serca
+        
         scene.tweens.add({
             targets: player, alpha: 0.2, duration: 100, yoyo: true, repeat: 3
         });
     }
 }
 
-// Wyświetla serduszka pod czołgiem
 function showHearts(scene, player, hpCount) {
-    const startX = player.x - ((hpCount-1) * 10);
     const hearts = [];
     
+    // Tworzymy serca (pozycja startowa nie ma znaczenia, bo zaraz update to poprawi)
     for(let i=0; i<hpCount; i++) {
-        let h = scene.add.text(startX + (i*20), player.y + 30, '❤️', { fontSize: '20px' }).setOrigin(0.5);
+        let h = scene.add.text(0, 0, '❤️', { fontSize: '20px', resolution: 2 }).setOrigin(0.5);
         hearts.push(h);
     }
 
+    // Zapisujemy referencje w graczu, żeby update() mógł je przesuwać
+    player.setData('activeHearts', hearts);
+
     // Znikają po 1.5 sekundy
     scene.time.delayedCall(1500, () => {
-        hearts.forEach(h => h.destroy());
+        // Sprawdzamy, czy te serca wciąż są "aktualne" (czy nie zostały nadpisane przez kolejny hit)
+        const currentHearts = player.getData('activeHearts');
+        if (currentHearts === hearts) { 
+            hearts.forEach(h => h.destroy());
+            player.setData('activeHearts', null);
+        }
     });
 }
 
@@ -947,5 +1025,4 @@ function setupInputs(scene) {
         space: Phaser.Input.Keyboard.KeyCodes.SPACE,
         shift: Phaser.Input.Keyboard.KeyCodes.SHIFT
     });
-
 }
