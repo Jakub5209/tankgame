@@ -59,6 +59,134 @@ body {
 
 #game-over-screen { display: none; }
 
+
+/* --- NOWY UKŁAD MENU (Flexbox) --- */
+#menu-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    z-index: 100;
+}
+
+/* Główne menu - środkowy panel */
+#main-menu {
+    position: relative; /* Resetujemy position absolute, bo teraz jest we flexie */
+    top: auto; left: auto; transform: none;
+    width: 300px;
+    /* Reszta stylu z poprzedniego pliku zostaje (tło, border itp.) */
+    background: rgba(20, 20, 25, 0.95);
+    border: 1px solid #444;
+    padding: 40px;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    backdrop-filter: blur(5px);
+}
+
+/* Panele sklepów */
+.shop-panel {
+    width: 220px;
+    background: rgba(15, 15, 20, 0.9);
+    border: 1px solid #444;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+    color: white;
+}
+
+.shop-coins {
+    font-size: 18px;
+    font-weight: bold;
+    color: gold;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+/* Elementy sklepu */
+.upgrade-item {
+    margin-bottom: 20px;
+    background: rgba(255,255,255,0.05);
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.upgrade-item label {
+    font-size: 12px;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.bar-container {
+    width: 100%;
+    height: 8px;
+    background: #333;
+    border-radius: 4px;
+    margin-bottom: 8px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    background: #00e676;
+    transition: width 0.3s;
+}
+
+.buy-btn {
+    padding: 5px;
+    font-size: 11px;
+    margin-top: 5px;
+    width: 100%;
+    background: #444;
+    border: 1px solid #666;
+}
+
+.buy-btn:hover { background: #555; }
+.buy-btn:active { transform: scale(0.98); }
+
+/* Kolory (siatka) */
+.color-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 5px;
+}
+
+.color-box {
+    width: 25px;
+    height: 25px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid #333;
+    position: relative;
+}
+
+.color-box.owned { border-color: #888; }
+.color-box.selected { border-color: #fff; box-shadow: 0 0 5px white; }
+.color-box.locked { opacity: 0.3; cursor: not-allowed; }
+.color-box.locked::after {
+    content: '🔒'; font-size: 10px; position: absolute; top: 2px; left: 4px;
+}
+
+/* --- Reszta (Game Over, Canvas) bez zmian lub drobne poprawki --- */
+#game-over-screen {
+    /* To musi zostać absolute, bo przykrywa wszystko */
+    position: absolute;
+    top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(20, 20, 25, 0.95);
+    /* ... reszta twoich styli ... */
+    padding: 40px; text-align: center; border-radius: 8px; z-index: 200;
+}
+
+img {
+    width: 300px;
+    height: 75px;
+    margin-bottom: 20px;
+}
 h1 {
     margin: 0 0 30px 0;
     font-size: 36px;

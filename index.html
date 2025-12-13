@@ -3,47 +3,85 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tactical Tank Battle</title>
+    <title>Tank Duels ⭐</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" type="image/png" href="img/favicon.png">
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
 </head>
 <body>
 
     <div id="game-container"></div>
 
-    <div id="main-menu">
-        <div id="volume-control">
-            <label for="music-slider">Muzyka 🎵</label>
-            <input type="range" id="music-slider" min="0" max="1" step="0.1" value="0.5">
-        </div>
-        <h1>TANK BATTLE <span style="color:#ff4d4d">2</span><span style="color:#4d4dff">D</span></h1>
+    <div id="menu-wrapper">
         
-        <div class="stats" style="margin-bottom: 20px; background: rgba(0,0,0,0.6);">
-            <div style="color: #ffd700; font-weight: bold; margin-bottom: 10px;">BANK (Total Coins)</div>
-            <div class="stat-row">
-                <span style="color: #ff5555; font-weight: bold;">Red:</span>
-                <span id="coin-display-red" style="color: gold;">0</span>
+        <div id="shop-red" class="shop-panel">
+            <h2 style="color: #ff5555;">RED SHOP</h2>
+            <div class="shop-coins">Coins: <span id="shop-coins-red">0</span></div>
+
+            <div class="upgrade-item">
+                <label>Fire Rate (Lvl <span id="lvl-rate-red">0</span>/5)</label>
+                <div class="bar-container"><div id="bar-rate-red" class="bar-fill" style="width:0%"></div></div>
+                <button class="buy-btn" onclick="buyUpgrade('red', 'rate')">UPGRADE (50$)</button>
             </div>
-            <div class="stat-row">
-                <span style="color: #5555ff; font-weight: bold;">Blue:</span>
-                <span id="coin-display-blue" style="color: gold;">0</span>
+
+            <div class="upgrade-item">
+                <label>Max HP (<span id="val-hp-red">1</span>/3 ❤️)</label>
+                <button class="buy-btn" onclick="buyUpgrade('red', 'hp')">ADD HEART (100$)</button>
+            </div>
+
+            <div class="upgrade-item">
+                <label>Paint Job</label>
+                <div class="color-grid" id="colors-red">
+                    </div>
             </div>
         </div>
 
-        <div class="menu-group">
-            <label>Wybierz Mapę:</label>
-            <select id="map-select">
-                <option value="1">Baza Wojskowa (Standard)</option>
-                <option value="2">Neon City (Colors)</option>
-            </select>
+        <div id="main-menu">
+            <div id="volume-control">
+                <label for="music-slider">Muzyka 🎵</label>
+                <input type="range" id="music-slider" min="0" max="1" step="0.1" value="0.5">
+            </div>
+            <img src="img/logo.png" alt="Tank Duels"/>
+            
+            <div class="menu-group">
+                <label>Wybierz Mapę:</label>
+                <select id="map-select">
+                    <option value="1">Baza Wojskowa (Standard)</option>
+                    <option value="2">Neon City (Colors)</option>
+                    <option value="3">Arena Centralna (Otwarta)</option>
+                </select>
+            </div>
+
+            <div class="menu-group checkbox-group">
+                <input type="checkbox" id="ricochet-toggle">
+                <label for="ricochet-toggle">Rykoszety</label>
+            </div>
+
+            <button id="start-btn" onclick="startGame()">ROZPOCZNIJ WALKĘ</button>
         </div>
 
-        <div class="menu-group checkbox-group">
-            <input type="checkbox" id="ricochet-toggle">
-            <label for="ricochet-toggle">Rykoszety (Odbijanie pocisków)</label>
+        <div id="shop-blue" class="shop-panel">
+            <h2 style="color: #5555ff;">BLUE SHOP</h2>
+            <div class="shop-coins">Coins: <span id="shop-coins-blue">0</span></div>
+
+             <div class="upgrade-item">
+                <label>Fire Rate (Lvl <span id="lvl-rate-blue">0</span>/5)</label>
+                <div class="bar-container"><div id="bar-rate-blue" class="bar-fill" style="width:0%"></div></div>
+                <button class="buy-btn" onclick="buyUpgrade('blue', 'rate')">UPGRADE (50$)</button>
+            </div>
+
+            <div class="upgrade-item">
+                <label>Max HP (<span id="val-hp-blue">1</span>/3 ❤️)</label>
+                <button class="buy-btn" onclick="buyUpgrade('blue', 'hp')">ADD HEART (100$)</button>
+            </div>
+
+            <div class="upgrade-item">
+                <label>Paint Job</label>
+                <div class="color-grid" id="colors-blue">
+                    </div>
+            </div>
         </div>
 
-        <button id="start-btn" onclick="startGame()">ROZPOCZNIJ WALKĘ</button>
     </div>
 
     <div id="game-over-screen">
