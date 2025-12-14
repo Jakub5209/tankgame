@@ -1022,7 +1022,7 @@ function collectPowerUp(player, powerUp) {
 
     if (type === 'double') {
         player.setData('activeAmmo', 0); 
-        player.setData('maxAmmo', 10);
+        player.setData('maxAmmo', 6);
         if(player.getData('timerDouble')) player.getData('timerDouble').remove();
         const timer = scene.time.delayedCall(5000, () => {
             if(player.active) player.setData('maxAmmo', 3);
@@ -1033,7 +1033,7 @@ function collectPowerUp(player, powerUp) {
     } else if (type === 'shield') {
         player.setData('hasShield', true);
         if(player.getData('timerShield')) player.getData('timerShield').remove();
-        const timer = scene.time.delayedCall(10000, () => {
+        const timer = scene.time.delayedCall(7000, () => {
             if(player.active) player.setData('hasShield', false);
         });
         player.setData('timerShield', timer);
