@@ -48,6 +48,7 @@ let lastCheckedMapId = 1;
 let isInputBlocked = false;
 
 let gameSettings = { ricochet: false, mapId: 1 };
+const ENABLE_MAP_ANIMATION = true; // Zmień na false, aby wyłączyć animację mapy
 let stats = { p1Shots: 0, p2Shots: 0 };
 
 // DANE SKLEPU I GRACZA
@@ -311,15 +312,43 @@ function triggerShopConfetti(element, color = 'gold') {
 // --- START GRY ---
 
 function startGame() {
+    // 1. Pobierz ustawienia
     gameSettings.ricochet = document.getElementById('ricochet-toggle').checked;
+    gameSettings.speedMode = document.getElementById('speed-toggle').checked;
     gameSettings.mapId = parseInt(document.getElementById('map-select').value);
 
-    // Ukrywamy wrapper menu
-    document.getElementById('menu-wrapper').style.display = 'none';
+    // 2. Animacja znikania MENU (UI)
+    const menuWrapper = document.getElementById('menu-wrapper');
+    menuWrapper.classList.add('fade-out'); // Dodaje klasę z CSS (opacity: 0)
     document.getElementById('game-over-screen').style.display = 'none';
 
-    const scene = game.scene.getScene('default');
-    if(scene) scene.scene.restart();
+    // --- NOWOŚĆ: Animacja znikania STAREJ MAPY ---
+    const scene = game.scene.scenes[0]; // Pobieramy aktywną scenę
+    if (scene) {
+        // Jeśli istnieją ściany, animujemy ich zniknięcie (skala do 0)
+        if (walls && walls.getChildren) {
+            scene.tweens.add({
+                targets: walls.getChildren(),
+                scale: 0,
+                duration: 600, // Czas trwania (krótszy niż timeout poniżej)
+                ease: 'Back.in'
+            });
+        }
+        // Opcjonalnie: ukrywamy też czołgi, żeby nie wisiały w powietrzu
+        if (player1 && player1.active) scene.tweens.add({ targets: player1, scale: 0, duration: 400 });
+        if (player2 && player2.active) scene.tweens.add({ targets: player2, scale: 0, duration: 400 });
+    }
+
+    // 3. Restart gry po zakończeniu animacji
+    // Czekamy 800ms (czas transition menu w CSS), co wystarczy też na animację ścian (600ms)
+    setTimeout(() => {
+        // Ukrywamy menu całkowicie (display: none)
+        menuWrapper.style.display = 'none';
+        menuWrapper.classList.remove('fade-out'); // Reset klasy na przyszłość (np. po Game Over)
+        
+        // Twardy reset sceny -> to wywoła create(), które zbuduje nową mapę z animacją
+        if(scene) scene.scene.restart();
+    }, 800);
 }
 
 function showMenu() {
@@ -391,11 +420,13 @@ function create() {
     createParticleSystems(this);
 
     walls = this.physics.add.staticGroup();
-    buildMapFromData(walls, this, gameSettings.mapId);
+    
+    // --- ZMIANA: Warunkowe budowanie mapy ---
+    // Jeśli menu było widoczne (czyli to start gry), użyj animacji (jeśli włączona w configu)
+    // Sprawdzamy czy to "świeży start" po restarcie sceny
+    const shouldUseAnimation = ENABLE_MAP_ANIMATION && !document.getElementById('menu-wrapper').style.display.includes('flex');
 
-    // TWORZENIE CZOŁGÓW Z DANYMI ZE SKLEPU
-    // Obliczamy szybkość strzału na podstawie levelu (bazowo np. 600ms - level*80ms)
-    // Minimalny delay to np. 150ms
+    // TWORZENIE CZOŁGÓW
     const p1Delay = Math.max(150, UPGRADES.baseFireRate - (playerData.red.fireRateLvl * UPGRADES.rateStep));
     const p2Delay = Math.max(150, UPGRADES.baseFireRate - (playerData.blue.fireRateLvl * UPGRADES.rateStep));
 
@@ -414,13 +445,30 @@ function create() {
     setupCollisions(this);
     setupInputs(this);
 
-    const menuVisible = document.getElementById('menu-wrapper').style.display !== 'none';
-    if (menuVisible) {
+    // Sprawdzamy czy jesteśmy w trybie menu (po wczytaniu strony) czy gry
+    // Uwaga: Funkcja startGame ukrywa menu zanim tu wejdziemy, więc sprawdzanie display może być mylące.
+    // Lepsza logika:
+    
+    // Jeśli właśnie wcisnęliśmy start (czyli menu jest ukryte)
+    const isGameplay = document.getElementById('menu-wrapper').style.display === 'none';
+
+    if (!isGameplay) {
+        // Jesteśmy w menu (tło gry, czołgi stoją)
+        buildMapFromData(walls, this, gameSettings.mapId); // Buduj normalnie
         playMusic(this, 'menuMusic');
         isInputBlocked = true; 
     } else {
+        // Rozpoczynamy rozgrywkę
         playMusic(this, 'gameMusic');
-        startCountdown(this);
+        
+        if (shouldUseAnimation) {
+             // Buduj z animacją, countdown odpali się po zakończeniu
+            buildMapWithAnimation(walls, this, gameSettings.mapId, () => startCountdown(this));
+        } else {
+            // Buduj natychmiast
+            buildMapFromData(walls, this, gameSettings.mapId);
+            startCountdown(this);
+        }
     }
 }
 
@@ -492,21 +540,42 @@ function setupCollisions(scene) {
     scene.physics.add.collider([player1, player2], walls);
     scene.physics.add.collider(player1, player2);
 
-    scene.physics.add.collider(bullets, walls, (bullet) => {
+    // KOLIZJA KULI ZE ŚCIANĄ (Tu jest logika Breakera)
+    scene.physics.add.collider(bullets, walls, (bullet, wall) => {
         if (!bullet.active) return;
+        
+        // Jeśli to Wall Breaker
+        if (bullet.getData('isBreaker')) {
+            playSound(scene, 'explosion'); // Dźwięk wybuchu
+            createSparks(wall.x, wall.y, 0xaaaaaa); // Szare iskry (gruz)
+            wall.destroy(); // Zniszcz ścianę
+            recycleBullet(bullet); // Zniszcz kulę
+            return;
+        }
+
+        // Standardowe zachowanie
         if (gameSettings.ricochet) {
             playSound(scene, 'ricochet');
             createSparks(bullet.x, bullet.y, 0xffff00);
         } else {
-            createSparks(bullet.x, bullet.y, bullet.getData('color'));
+            // --- ZMIANA: Dodano efekty dla trybu bez rykoszetu ---
+            createSparks(bullet.x, bullet.y, 0xffff00); // Żółte iskry jak przy rykoszecie
             recycleBullet(bullet);
         }
     });
 
     scene.physics.add.collider(missiles, walls, (m) => { if(m.active) createSparks(m.x, m.y, 0xffaa00); });
+    
+    // Obsługa wyjścia poza mapę (World Bounds)
     scene.physics.world.on('worldbounds', (body) => {
         const obj = body.gameObject;
         if (obj && obj.getData && obj.getData('isBullet') && obj.active) {
+            // Breaker niszczy się na granicy mapy
+            if (obj.getData('isBreaker')) {
+                recycleBullet(obj);
+                return;
+            }
+
             if (gameSettings.ricochet) {
                 playSound(scene, 'ricochet');
                 createSparks(body.x, body.y, 0xffff00);
@@ -518,39 +587,42 @@ function setupCollisions(scene) {
     
     scene.physics.add.overlap(missiles, [player1, player2], (player, missile) => {
         if(!missile.active || !player.active) return;
-        // Ochrona przed własną rakietą zaraz po wystrzale
         if (scene.time.now - missile.getData('spawnTime') < 500 && missile.getData('owner') === player.getData('id')) return;
         
         playSound(scene, 'missileExplosion');
         createTankExplosion(missile.x, missile.y); 
         missile.destroy(); 
-        handleHit(player, { active: true }); // Symulujemy trafienie
+        handleHit(player, { active: true }); 
     }, null, scene);
 
     scene.physics.add.overlap([player1, player2], powerUps, collectPowerUp, null, scene);
     scene.physics.add.overlap([player1, player2], coins, collectCoin, null, scene);
 }
 
-// Zmodyfikowana funkcja tworzenia czołgu o parametry ze sklepu
 function createTank(scene, x, y, texture, id, color, hp, fireRate) {
     let tank = scene.physics.add.sprite(x, y, texture);
     tank.setCollideWorldBounds(true);
     tank.setDrag(800); 
     tank.setDamping(false);
     tank.body.setSize(30, 30);
-    tank.setTint(color); // Aplikujemy kolor ze sklepu
+    tank.setTint(color); 
     
+    // LOGIKA SPEED MODE
+    const baseSpeed = gameSettings.speedMode ? 400 : 220; // 400 to bardzo szybko
+    const rotSpeed = gameSettings.speedMode ? 350 : 220;
+
     tank.setData({ 
         id: id, 
-        colorHex: color, // Zapamiętujemy kolor do pocisków
-        speed: 220,     
-        rotSpeed: 220,
+        colorHex: color, 
+        speed: baseSpeed,     
+        rotSpeed: rotSpeed,
         activeAmmo: 0,
-        maxAmmo: 5,
-        fireDelay: fireRate, // Szybkość strzelania ze sklepu
+        maxAmmo: 3,
+        fireDelay: fireRate, 
         lastFired: 0,
-        hp: hp,           // HP ze sklepu
+        hp: hp,           
         hasShield: false,
+        hasBreaker: 0, // Inicjalizacja nowej flagi
         shieldVisual: null,
         nextShotIsMissile: false 
     });
@@ -559,6 +631,15 @@ function createTank(scene, x, y, texture, id, color, hp, fireRate) {
 
 function handleHit(player, bullet) {
     if (!player.active) return;
+    
+    // --- BLOKADA SAMOBÓJSTWA ---
+    // Jeśli kula ma właściciela i jest nim ten sam gracz, który obrywa:
+    if (bullet.getData && bullet.getData('owner') === player.getData('id')) {
+        // Usuwamy kulę, żeby nie przelatywała jak duch, ale nie zadajemy obrażeń
+        if (bullet.active && bullet.disableBody) recycleBullet(bullet);
+        return;
+    }
+
     const scene = player.scene;
 
     // Tarcza
@@ -580,7 +661,7 @@ function handleHit(player, bullet) {
 
     playSound(scene, 'explosion');
 
-    // BUGFIX: Usuwamy stare serca natychmiast, jeśli jakieś są
+    // BUGFIX: Usuwamy stare serca
     const oldHearts = player.getData('activeHearts');
     if (oldHearts) {
         oldHearts.forEach(h => h.destroy());
@@ -602,7 +683,7 @@ function handleHit(player, bullet) {
         });
     } else {
         createSparks(player.x, player.y, 0xff0000);
-        showHearts(scene, player, hp); // Wyświetlamy nowe serca
+        showHearts(scene, player, hp); 
         
         scene.tweens.add({
             targets: player, alpha: 0.2, duration: 100, yoyo: true, repeat: 3
@@ -646,7 +727,7 @@ function moveTank(scene, player, up, down, left, right) {
 
 function tryFire(scene, player, colorId, time) {
     if (!player.active) return;
-    const rate = player.getData('fireDelay'); // Pobieramy ulepszony fireRate
+    const rate = player.getData('fireDelay'); 
     if (time < player.getData('lastFired') + rate) return;
 
     if (player.getData('nextShotIsMissile')) {
@@ -660,7 +741,6 @@ function tryFire(scene, player, colorId, time) {
     const mx = player.x + vec.x;
     const my = player.y + vec.y;
     
-    // Sprawdź czy lufa w ścianie
     const muzzleRect = new Phaser.Geom.Rectangle(mx-2, my-2, 4, 4);
     let blocked = false;
     walls.getChildren().forEach(w => { if(Phaser.Geom.Intersects.RectangleToRectangle(w.getBounds(), muzzleRect)) blocked = true; });
@@ -669,7 +749,6 @@ function tryFire(scene, player, colorId, time) {
     player.setData('lastFired', time);
     playSound(scene, 'shoot');
     
-    // Strzał
     const bullet = bullets.get(mx, my);
     if (bullet) {
         player.setData('activeAmmo', player.getData('activeAmmo') + 1);
@@ -677,23 +756,48 @@ function tryFire(scene, player, colorId, time) {
         bullet.enableBody(true, mx, my, true, true);
         bullet.setAlpha(1).setRotation(player.rotation);
         
-        // Kolor pocisku taki jak czołgu
-        bullet.setTexture('bullet');
-        bullet.setTint(player.getData('colorHex'));
-        
         bullet.setData('owner', colorId);
-        bullet.setData('color', player.getData('colorHex'));
         bullet.setData('isBullet', true);
         
-        if (gameSettings.ricochet) {
-            bullet.setBounce(1).setCollideWorldBounds(true);
+        // --- LOGIKA WALL BREAKER ---
+        let currentBreakerAmmo = player.getData('breakerAmmo');
+        const isBreaker = currentBreakerAmmo > 0;
+        
+        bullet.setData('isBreaker', isBreaker);
+
+        if (isBreaker) {
+            // Odejmujemy amunicję
+            player.setData('breakerAmmo', currentBreakerAmmo - 1);
+            if (player.getData('breakerAmmo') === 0) {
+                 showFloatingText(scene, player.x, player.y - 40, "BREAKER ENDED", 0xaaaaaa);
+            }
+
+            bullet.setTexture('bullet'); 
+            bullet.setTint(0xff00ff); 
+            bullet.setScale(1.3);     
+            bullet.setBounce(0);      
+            bullet.setCollideWorldBounds(true);
             bullet.body.onWorldBounds = true;
-            scene.tweens.add({ targets: bullet, alpha: 0, duration: 500, delay: 1500, onComplete: () => recycleBullet(bullet)});
         } else {
-            bullet.setBounce(0).setCollideWorldBounds(true);
-            bullet.body.onWorldBounds = true;
+            // Standardowy pocisk
+            bullet.setTexture('bullet');
+            bullet.setTint(player.getData('colorHex'));
+            bullet.setScale(1);
+            
+            if (gameSettings.ricochet) {
+                bullet.setBounce(1).setCollideWorldBounds(true);
+                bullet.body.onWorldBounds = true;
+                scene.tweens.add({ targets: bullet, alpha: 0, duration: 500, delay: 1500, onComplete: () => recycleBullet(bullet)});
+            } else {
+                bullet.setBounce(0).setCollideWorldBounds(true);
+                bullet.body.onWorldBounds = true;
+            }
         }
-        scene.physics.velocityFromRotation(player.rotation, 450, bullet.body.velocity);
+        
+        // Speed Mode dla kuli też może być szybszy
+        const bulletSpeed = gameSettings.speedMode ? 650 : 450;
+        scene.physics.velocityFromRotation(player.rotation, bulletSpeed, bullet.body.velocity);
+        
         if(colorId === 'red') stats.p1Shots++; else stats.p2Shots++;
     }
 }
@@ -725,7 +829,9 @@ function fireMissile(scene, player, colorId, time) {
         missile.body.velocity.x = 0;
         missile.body.velocity.y = 0;
         
-        scene.physics.velocityFromRotation(player.rotation, 225, missile.body.velocity);
+        // Speed Mode dla rakiety
+        const missileSpeed = gameSettings.speedMode ? 400 : 225;
+        scene.physics.velocityFromRotation(player.rotation, missileSpeed, missile.body.velocity);
     }
 }
 
@@ -821,9 +927,15 @@ function spawnRandomPowerUp() {
     if(isGameOver) return;
     const pos = getValidSpawnPoint();
     if(pos) {
-        const typeId = Phaser.Math.Between(0, 2);
-        let textureKey = typeId === 0 ? 'pu_double' : (typeId === 1 ? 'pu_shield' : 'pu_missile');
-        let typeStr = typeId === 0 ? 'double' : (typeId === 1 ? 'shield' : 'missile');
+        // Zwiększamy zakres losowania do 3 (0, 1, 2, 3)
+        const typeId = Phaser.Math.Between(0, 3);
+        
+        let textureKey, typeStr;
+        if (typeId === 0) { textureKey = 'pu_double'; typeStr = 'double'; }
+        else if (typeId === 1) { textureKey = 'pu_shield'; typeStr = 'shield'; }
+        else if (typeId === 2) { textureKey = 'pu_missile'; typeStr = 'missile'; }
+        else { textureKey = 'pu_breaker'; typeStr = 'breaker'; } // Nowy typ
+
         const pu = powerUps.create(pos.x, pos.y, textureKey);
         pu.setData('type', typeStr).setScale(0);
         game.scene.scenes[0].tweens.add({ targets: pu, scale: 1, duration: 500, ease: 'Back.out' });
@@ -881,10 +993,11 @@ function collectPowerUp(player, powerUp) {
         player.setData('maxAmmo', 10);
         if(player.getData('timerDouble')) player.getData('timerDouble').remove();
         const timer = scene.time.delayedCall(5000, () => {
-            if(player.active) player.setData('maxAmmo', 5);
+            if(player.active) player.setData('maxAmmo', 3);
         });
         player.setData('timerDouble', timer);
         showFloatingText(scene, player.x, player.y - 40, "DOUBLE AMMO!", 0xffff00);
+        
     } else if (type === 'shield') {
         player.setData('hasShield', true);
         if(player.getData('timerShield')) player.getData('timerShield').remove();
@@ -893,9 +1006,18 @@ function collectPowerUp(player, powerUp) {
         });
         player.setData('timerShield', timer);
         showFloatingText(scene, player.x, player.y - 40, "SHIELD!", 0x00ffff);
+        
     } else if (type === 'missile') {
         player.setData('nextShotIsMissile', true);
         showFloatingText(scene, player.x, player.y - 40, "MISSILE READY!", 0xff5500);
+        
+    } else if (type === 'breaker') { 
+        // --- ZMIANA: 3 strzały zamiast timera ---
+        player.setData('breakerAmmo', 3);
+        // Usuwamy stary timer jeśli istniał, żeby nie mieszał
+        if(player.getData('timerBreaker')) player.getData('timerBreaker').remove();
+        
+        showFloatingText(scene, player.x, player.y - 40, "BREAKER: 3 SHOTS!", 0xaa00aa);
     }
 }
 
@@ -974,7 +1096,7 @@ function buildMapFromData(wallsGroup, scene, mapId) {
 function createDetailedGraphics(scene) {
     const g = scene.make.graphics({x: 0, y: 0, add: false});
 
-    // ZMIANA: Czołg "Base" jest szary/biały, aby można było go kolorować (tint) dynamicznie
+    // Czołg Base
     drawTankModel(g, 0x888888, 0xffffff); 
     g.generateTexture('tankBase', 40, 40);
 
@@ -982,7 +1104,7 @@ function createDetailedGraphics(scene) {
     g.clear(); g.fillStyle(0xffffff, 1); g.fillRect(0, 0, 40, 40); g.fillStyle(0xdddddd, 1); g.fillRect(2, 2, 36, 36); g.fillStyle(0xeeeeee, 1); g.fillCircle(20, 20, 4); 
     g.generateTexture('wall', 40, 40);
 
-    // Pocisk i cząsteczka (biała, kolorowana dynamicznie)
+    // Pocisk i cząsteczka
     g.clear(); g.fillStyle(0xffffff, 1); g.fillCircle(5, 5, 5); 
     g.generateTexture('bullet', 10, 10); 
     g.generateTexture('particle', 10, 10);
@@ -990,11 +1112,20 @@ function createDetailedGraphics(scene) {
     function drawBox(color, symbolFn) {
         g.clear(); g.lineStyle(2, 0xffffff, 1); g.fillStyle(color, 0.8); g.fillRect(0, 0, 30, 30); g.strokeRect(0, 0, 30, 30); symbolFn();
     }
-    // Powerupy
+    
+    // --- POWERUPY ---
+    // Double Ammo
     drawBox(0xaaaa00, () => { g.fillStyle(0xffffff, 1); g.fillCircle(10, 15, 4); g.fillCircle(20, 15, 4); }); g.generateTexture('pu_double', 30, 30);
+    // Shield
     drawBox(0x00aaaa, () => { g.lineStyle(2, 0xffffff, 1); g.strokeCircle(15, 15, 8); }); g.generateTexture('pu_shield', 30, 30);
-    g.clear(); g.lineStyle(4, 0x00ffff, 1); g.strokeCircle(25, 25, 20); g.generateTexture('shieldIcon', 50, 50);
+    // Missile
     drawBox(0xaa4400, () => { g.fillStyle(0xffffff, 1); g.fillTriangle(15, 5, 25, 25, 5, 25); }); g.generateTexture('pu_missile', 30, 30);
+    
+    // [NOWE] Wall Breaker (Fioletowy z kwadratem)
+    drawBox(0x800080, () => { g.fillStyle(0xffffff, 1); g.fillRect(8, 8, 14, 14); }); g.generateTexture('pu_breaker', 30, 30);
+
+    // Ikona tarczy na czołgu
+    g.clear(); g.lineStyle(4, 0x00ffff, 1); g.strokeCircle(25, 25, 20); g.generateTexture('shieldIcon', 50, 50);
     
     // Rakieta
     g.clear(); g.fillStyle(0xffaa00, 1); g.fillRect(0, 0, 16, 6); g.fillStyle(0xff0000, 1); g.fillRect(0, 0, 4, 6); g.fillStyle(0xffffff, 1); g.fillTriangle(16, 0, 16, 6, 22, 3); g.generateTexture('missile', 22, 6);
@@ -1024,5 +1155,56 @@ function setupInputs(scene) {
         d: Phaser.Input.Keyboard.KeyCodes.D,
         space: Phaser.Input.Keyboard.KeyCodes.SPACE,
         shift: Phaser.Input.Keyboard.KeyCodes.SHIFT
+    });
+}
+
+function buildMapWithAnimation(wallsGroup, scene, mapId, onCompleteCallback) {
+    const layout = mapLayouts[mapId] || mapLayouts[1];
+    let createdWalls = [];
+
+    // 1. Stwórz wszystkie ściany, ale ukryte (scale = 0)
+    for (let y = 0; y < layout.length; y++) {
+        for (let x = 0; x < layout[y].length; x++) {
+            const cell = layout[y][x];
+            if (cell !== 0) {
+                const wall = wallsGroup.create(x * 40 + 20, y * 40 + 20, 'wall');
+                if (cell > 1) wall.setTint(cell);
+                wall.setScale(0); // Startujemy od zera
+                
+                // Dodajemy do listy z informacją o pozycji X (żeby animować od lewej)
+                createdWalls.push({ sprite: wall, gridX: x, gridY: y });
+            }
+        }
+    }
+
+    // 2. Animacja "fali"
+    if (createdWalls.length === 0) {
+        if(onCompleteCallback) onCompleteCallback();
+        return;
+    }
+
+    // Sortujemy, chociaż gridowe podejście w tweenie jest lepsze.
+    // Użyjemy delay w oparciu o pozycję X.
+    
+    scene.tweens.add({
+        targets: createdWalls.map(w => w.sprite),
+        scale: 1,
+        duration: 300,
+        ease: 'Back.out',
+        delay: (target, targetKey, value, targetIndex, totalTargets, tween) => {
+            // Znajdźmy obiekt w naszej liście, żeby znać jego X
+            // Phaser przekazuje sam sprite jako target.
+            // Prościej: delay obliczamy na podstawie współrzędnej X sprite'a
+            const gridX = (target.x - 20) / 40;
+            return gridX * 50; // 50ms opóźnienia na każdą kolumnę
+        },
+        onStart: (tween, targets) => {
+             // Opcjonalnie: dźwięk budowania przy starcie każdej kolumny?
+             // To by było dużo dźwięków. Może jeden dźwięk "futurystyczny" na start?
+             playSound(scene, 'coin'); // Dźwięk startu budowania
+        },
+        onComplete: () => {
+            if(onCompleteCallback) onCompleteCallback();
+        }
     });
 }

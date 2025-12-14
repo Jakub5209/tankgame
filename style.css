@@ -284,3 +284,13 @@ button:hover { background: #555; border-color: #777; }
     border-color: #333;
     cursor: not-allowed;
 }
+
+/* --- Animacje interfejsu --- */
+#menu-wrapper {
+    transition: opacity 0.8s ease-out; /* Płynne znikanie */
+}
+
+.fade-out {
+    opacity: 0 !important;
+    pointer-events: none;
+}
