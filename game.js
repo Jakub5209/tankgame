@@ -506,7 +506,7 @@ function update(time, delta) {
     if (keys.space.isDown) tryFire(this, player1, 'red', time);
 
     moveTank(this, player2, cursors.up, cursors.down, cursors.left, cursors.right);
-    if (keys.shift.isDown) tryFire(this, player2, 'blue', time);
+    if (this.input.activePointer.isDown) tryFire(this, player2, 'blue', time);
 
     updateShieldEffect(player1);
     updateShieldEffect(player2);
@@ -632,11 +632,20 @@ function createTank(scene, x, y, texture, id, color, hp, fireRate) {
 function handleHit(player, bullet) {
     if (!player.active) return;
     
-    // --- BLOKADA SAMOBÓJSTWA ---
-    // Jeśli kula ma właściciela i jest nim ten sam gracz, który obrywa:
+    // --- ZABEZPIECZENIE: "Grace Period" ---
+    // Jeśli kula należy do gracza, który został trafiony...
     if (bullet.getData && bullet.getData('owner') === player.getData('id')) {
-        // Usuwamy kulę, żeby nie przelatywała jak duch, ale nie zadajemy obrażeń
-        if (bullet.active && bullet.disableBody) recycleBullet(bullet);
+        const currentTime = player.scene.time.now;
+        const spawnTime = bullet.getData('spawnTime') || 0;
+        
+        // Jeśli kula ma mniej niż 150ms (dopiero wylatuje z lufy), IGNORUJEMY kolizję.
+        if (currentTime - spawnTime < 150) {
+            return; // Nie niszcz kuli, nie zadawaj obrażeń. Niech leci.
+        }
+        
+        // Jeśli kula jest stara (wróciła rykoszetem), niszczymy ją, ale nie zadajemy obrażeń (chyba że chcesz friendly fire)
+        // W standardzie: gracz nie może zabić samego siebie, więc tylko usuwamy kulę.
+        recycleBullet(bullet); 
         return;
     }
 
@@ -661,7 +670,6 @@ function handleHit(player, bullet) {
 
     playSound(scene, 'explosion');
 
-    // BUGFIX: Usuwamy stare serca
     const oldHearts = player.getData('activeHearts');
     if (oldHearts) {
         oldHearts.forEach(h => h.destroy());
@@ -751,13 +759,20 @@ function tryFire(scene, player, colorId, time) {
     
     const bullet = bullets.get(mx, my);
     if (bullet) {
+        // ZABEZPIECZENIE: Dla pewności czyścimy tweeny też przy pobraniu
+        scene.tweens.killTweensOf(bullet);
+
         player.setData('activeAmmo', player.getData('activeAmmo') + 1);
         bullet.setActive(true).setVisible(true);
         bullet.enableBody(true, mx, my, true, true);
-        bullet.setAlpha(1).setRotation(player.rotation);
+        
+        // Resetujemy wygląd (ważne po rykoszetach, które zmieniają alpha)
+        bullet.setAlpha(1);
+        bullet.setRotation(player.rotation);
         
         bullet.setData('owner', colorId);
         bullet.setData('isBullet', true);
+        bullet.setData('spawnTime', time); // Zapisujemy czas startu dla handleHit
         
         // --- LOGIKA WALL BREAKER ---
         let currentBreakerAmmo = player.getData('breakerAmmo');
@@ -766,7 +781,6 @@ function tryFire(scene, player, colorId, time) {
         bullet.setData('isBreaker', isBreaker);
 
         if (isBreaker) {
-            // Odejmujemy amunicję
             player.setData('breakerAmmo', currentBreakerAmmo - 1);
             if (player.getData('breakerAmmo') === 0) {
                  showFloatingText(scene, player.x, player.y - 40, "BREAKER ENDED", 0xaaaaaa);
@@ -787,21 +801,27 @@ function tryFire(scene, player, colorId, time) {
             if (gameSettings.ricochet) {
                 bullet.setBounce(1).setCollideWorldBounds(true);
                 bullet.body.onWorldBounds = true;
-                scene.tweens.add({ targets: bullet, alpha: 0, duration: 500, delay: 1500, onComplete: () => recycleBullet(bullet)});
+                
+                // Tutaj tworzymy animację, którą musimy zabić w recycleBullet!
+                scene.tweens.add({ 
+                    targets: bullet, 
+                    alpha: 0, 
+                    duration: 500, 
+                    delay: 1500, 
+                    onComplete: () => recycleBullet(bullet)
+                });
             } else {
                 bullet.setBounce(0).setCollideWorldBounds(true);
                 bullet.body.onWorldBounds = true;
             }
         }
         
-        // Speed Mode dla kuli też może być szybszy
         const bulletSpeed = gameSettings.speedMode ? 650 : 450;
         scene.physics.velocityFromRotation(player.rotation, bulletSpeed, bullet.body.velocity);
         
         if(colorId === 'red') stats.p1Shots++; else stats.p2Shots++;
     }
 }
-
 // ... Funkcje Rakiety bez zmian, poza zmianą textury w createDetailedGraphics ...
 // Kopiuj fireMissile i updateMissileLogic ze starego kodu (są bez zmian logicznych)
 
@@ -824,13 +844,13 @@ function fireMissile(scene, player, colorId, time) {
         
         missile.setData('owner', colorId);
         missile.setData('spawnTime', time);
-        missile.setData('destroyTime', time + 6000); 
+        missile.setData('destroyTime', time + 5000); 
 
         missile.body.velocity.x = 0;
         missile.body.velocity.y = 0;
         
         // Speed Mode dla rakiety
-        const missileSpeed = gameSettings.speedMode ? 400 : 225;
+        const missileSpeed = gameSettings.speedMode ? 400 : 220;
         scene.physics.velocityFromRotation(player.rotation, missileSpeed, missile.body.velocity);
     }
 }
@@ -894,15 +914,27 @@ function updateMissileLogic(missile, time) {
 
 function recycleBullet(bullet) {
     if (!bullet.active) return;
+    
+    const scene = bullet.scene; // Pobieramy scenę z kuli
+
+    // --- KLUCZOWA POPRAWKA ---
+    // Zatrzymujemy wszelkie animacje (Tweens) działające na tej kuli.
+    // Dzięki temu stary timer z poprzedniego strzału nie zabije nowej kuli.
+    scene.tweens.killTweensOf(bullet);
+
     const ownerId = bullet.getData('owner');
     let owner = (ownerId === 'red') ? player1 : player2;
+    
+    // Oddajemy amunicję właścicielowi
     if (owner && owner.active) {
         let currentAmmo = owner.getData('activeAmmo');
         if (currentAmmo > 0) owner.setData('activeAmmo', currentAmmo - 1);
     }
-    bullet.disableBody(true, true);
+
+    bullet.disableBody(true, true); // Wyłącz fizykę i ukryj
     bullet.setActive(false);
     bullet.setVisible(false);
+    bullet.setAlpha(1); // Resetujemy przezroczystość na przyszłość
 }
 
 function updateShieldEffect(player) {
