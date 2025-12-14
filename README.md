@@ -1,4 +1,4 @@
-# 💥 Tank Duels: Friday Edition 🛡️
+# 💥 Tank Duels: *Friday Edition* 🛡️
 
 **Lokalna, dwuosobowa arena bitew czołgów.** Zanurz się w intensywnych, pikselowych pojedynkach 1 vs 1 na jednej klawiaturze. Szybka rozgrywka, dynamiczne power-upy i system customizacji czołgów czekają! Zbudowane na potężnym frameworku **Phaser 3**.
 
@@ -57,7 +57,7 @@ Ponieważ gra ładuje lokalne zasoby (obrazy, dźwięki) za pomocą Phaser 3, **
 
 1.  **Klonowanie Repozytorium:**
     ```bash
-    git clone [https://github.com/Jakub5209/tankgame](https://github.com/Jakub5209/tankgame)
+    git clone https://github.com/Jakub5209/tankgame
     ```
 2.  **Uruchomienie Serwera Lokalnego (Rekomendowane):**
     * **VS Code:** Użyj rozszerzenia **"Live Server"**.
