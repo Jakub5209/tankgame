@@ -6,6 +6,7 @@ body {
     align-items: center;
     height: 100vh;
     font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-style: normal;
     overflow: hidden;
     color: white;
 }
@@ -98,6 +99,12 @@ body {
     color: white;
 }
 
+.shop-panel h2 {
+    font-family: "Jersey 15", sans-serif;
+    font-size: 40px;
+    font-weight: 200;
+}
+
 .shop-coins {
     font-size: 18px;
     font-weight: bold;
@@ -143,6 +150,15 @@ body {
     width: 100%;
     background: #444;
     border: 1px solid #666;
+    font-family: "Jersey 15", sans-serif;
+    font-size: 20px;
+    font-weight: 200;
+}
+
+.start-btn {
+    font-family: "Jersey 15", sans-serif;
+    font-size: 30px;
+    font-weight: 100;
 }
 
 .buy-btn:hover { background: #555; }

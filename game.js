@@ -38,7 +38,7 @@ const game = new Phaser.Game(config);
 
 // Zmienne globalne
 let player1, player2;
-let cursors, keys;
+let keys, keysP2;
 let bullets, missiles, walls, powerUps, coins;
 let bulletEmitter, explosionEmitter, missileEmitter;
 let musicVolume = 0.5;
@@ -502,10 +502,14 @@ function startCountdown(scene) {
 function update(time, delta) {
     if (isGameOver || isInputBlocked) return;
 
+    // Sterowanie Gracza 1 (WASD)
     moveTank(this, player1, keys.w, keys.s, keys.a, keys.d);
     if (keys.space.isDown) tryFire(this, player1, 'red', time);
 
-    moveTank(this, player2, cursors.up, cursors.down, cursors.left, cursors.right);
+    // Sterowanie Gracza 2 (STRZAŁKI) - ZMIANA: Używamy keysP2 zamiast cursors
+    moveTank(this, player2, keysP2.up, keysP2.down, keysP2.left, keysP2.right);
+    
+    // Strzelanie Gracza 2 (Myszka lub dodaj klawisz do keysP2 np. Enter)
     if (this.input.activePointer.isDown) tryFire(this, player2, 'blue', time);
 
     updateShieldEffect(player1);
@@ -519,7 +523,6 @@ function update(time, delta) {
         if (p.active) {
             const hearts = p.getData('activeHearts');
             if (hearts && hearts.length > 0) {
-                // Wyliczamy środek, żeby serca były wycentrowane nad czołgiem
                 const count = hearts.length;
                 const spacing = 20;
                 const totalWidth = (count - 1) * spacing;
@@ -527,7 +530,7 @@ function update(time, delta) {
                 
                 hearts.forEach((h, index) => {
                     h.x = startX + (index * spacing);
-                    h.y = p.y - 40; // 40 pikseli nad czołgiem
+                    h.y = p.y - 40;
                 });
             }
         }
@@ -632,26 +635,18 @@ function createTank(scene, x, y, texture, id, color, hp, fireRate) {
 function handleHit(player, bullet) {
     if (!player.active) return;
     
-    // --- ZABEZPIECZENIE: "Grace Period" ---
-    // Jeśli kula należy do gracza, który został trafiony...
+    // Grace Period dla własnych kul (bez zmian)
     if (bullet.getData && bullet.getData('owner') === player.getData('id')) {
         const currentTime = player.scene.time.now;
         const spawnTime = bullet.getData('spawnTime') || 0;
-        
-        // Jeśli kula ma mniej niż 150ms (dopiero wylatuje z lufy), IGNORUJEMY kolizję.
-        if (currentTime - spawnTime < 150) {
-            return; // Nie niszcz kuli, nie zadawaj obrażeń. Niech leci.
-        }
-        
-        // Jeśli kula jest stara (wróciła rykoszetem), niszczymy ją, ale nie zadajemy obrażeń (chyba że chcesz friendly fire)
-        // W standardzie: gracz nie może zabić samego siebie, więc tylko usuwamy kulę.
+        if (currentTime - spawnTime < 150) return;
         recycleBullet(bullet); 
         return;
     }
 
     const scene = player.scene;
 
-    // Tarcza
+    // Tarcza (bez zmian)
     if (player.getData('hasShield')) {
         playSound(scene, 'ricochet');
         createSparks(player.x, player.y, 0x00ffff);
@@ -662,6 +657,13 @@ function handleHit(player, bullet) {
     }
 
     if (bullet.active && bullet.disableBody) recycleBullet(bullet);
+
+    // --- NAPRAWA BUGA Z PRZYCIEMNIENIEM ---
+    // 1. Natychmiast przerwij wszystkie trwające animacje na graczu (mruganie)
+    scene.tweens.killTweensOf(player);
+    // 2. Przywróć pełną widoczność, żeby czołg nie został "ciemny"
+    player.setAlpha(1); 
+    player.setScale(1); // Na wszelki wypadek resetujemy też skalę
 
     // LOGIKA ŻYCIA (HP)
     let hp = player.getData('hp');
@@ -693,8 +695,17 @@ function handleHit(player, bullet) {
         createSparks(player.x, player.y, 0xff0000);
         showHearts(scene, player, hp); 
         
+        // Animacja mrugania - teraz bezpieczna, bo poprzednia została usunięta wyżej
         scene.tweens.add({
-            targets: player, alpha: 0.2, duration: 100, yoyo: true, repeat: 3
+            targets: player, 
+            alpha: 0.2, 
+            duration: 100, 
+            yoyo: true, 
+            repeat: 3,
+            onComplete: () => {
+                // Dla pewności upewniamy się, że po animacji wraca do 1
+                if(player.active) player.setAlpha(1);
+            }
         });
     }
 }
@@ -1179,7 +1190,7 @@ function drawTankModel(g, darkColor, lightColor) {
 }
 
 function setupInputs(scene) {
-    cursors = scene.input.keyboard.createCursorKeys();
+    // Klawisze dla Gracza 1 (Czerwony) - WASD + Spacja
     keys = scene.input.keyboard.addKeys({
         w: Phaser.Input.Keyboard.KeyCodes.W,
         s: Phaser.Input.Keyboard.KeyCodes.S,
@@ -1188,6 +1199,19 @@ function setupInputs(scene) {
         space: Phaser.Input.Keyboard.KeyCodes.SPACE,
         shift: Phaser.Input.Keyboard.KeyCodes.SHIFT
     });
+
+    // Klawisze dla Gracza 2 (Niebieski) - Strzałki + Enter (lub Myszka jak wolisz)
+    // Tworzymy to jako osobny obiekt, żeby nie kolidowało z WASD
+    keysP2 = scene.input.keyboard.addKeys({
+        up: Phaser.Input.Keyboard.KeyCodes.UP,
+        down: Phaser.Input.Keyboard.KeyCodes.DOWN,
+        left: Phaser.Input.Keyboard.KeyCodes.LEFT,
+        right: Phaser.Input.Keyboard.KeyCodes.RIGHT
+    });
+    
+    // Zachowujemy kursory tylko jako fallback, jeśli gdzieś jeszcze ich używasz, 
+    // ale sterowanie opieramy na keysP2
+    cursors = scene.input.keyboard.createCursorKeys();
 }
 
 function buildMapWithAnimation(wallsGroup, scene, mapId, onCompleteCallback) {
