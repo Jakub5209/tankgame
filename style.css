@@ -16,7 +16,7 @@ body {
     border: 4px solid #222;
 }
 
-/* Wspólne style dla nakładek (Menu i Game Over) */
+
 #main-menu, #game-over-screen {
     position: absolute;
     top: 50%;
@@ -33,7 +33,7 @@ body {
     z-index: 100;
 }
 
-/* --- Style dla suwaka głośności --- */
+
 #volume-control {
     position: absolute;
     top: 10px;
@@ -55,13 +55,13 @@ body {
 #volume-control input[type=range] {
     width: 70px;
     cursor: pointer;
-    accent-color: #28a745; /* Kolor suwaka pasujący do przycisku Start */
+    accent-color: #28a745;
 }
 
 #game-over-screen { display: none; }
 
 
-/* --- NOWY UKŁAD MENU (Flexbox) --- */
+
 #menu-wrapper {
     position: absolute;
     top: 50%;
@@ -73,12 +73,11 @@ body {
     z-index: 100;
 }
 
-/* Główne menu - środkowy panel */
+
 #main-menu {
-    position: relative; /* Resetujemy position absolute, bo teraz jest we flexie */
+    position: relative;
     top: auto; left: auto; transform: none;
     width: 300px;
-    /* Reszta stylu z poprzedniego pliku zostaje (tło, border itp.) */
     background: rgba(20, 20, 25, 0.95);
     border: 1px solid #444;
     padding: 40px;
@@ -88,7 +87,7 @@ body {
     backdrop-filter: blur(5px);
 }
 
-/* Panele sklepów */
+
 .shop-panel {
     width: 220px;
     background: rgba(15, 15, 20, 0.9);
@@ -114,7 +113,7 @@ body {
     padding-bottom: 10px;
 }
 
-/* Elementy sklepu */
+
 .upgrade-item {
     margin-bottom: 20px;
     background: rgba(255,255,255,0.05);
@@ -164,7 +163,6 @@ body {
 .buy-btn:hover { background: #555; }
 .buy-btn:active { transform: scale(0.98); }
 
-/* Kolory (siatka) */
 .color-grid {
     display: flex;
     flex-wrap: wrap;
@@ -188,13 +186,13 @@ body {
     content: '🔒'; font-size: 10px; position: absolute; top: 2px; left: 4px;
 }
 
-/* --- Reszta (Game Over, Canvas) bez zmian lub drobne poprawki --- */
+
 #game-over-screen {
-    /* To musi zostać absolute, bo przykrywa wszystko */
+
     position: absolute;
     top: 50%; left: 50%; transform: translate(-50%, -50%);
     background: rgba(20, 20, 25, 0.95);
-    /* ... reszta twoich styli ... */
+
     padding: 40px; text-align: center; border-radius: 8px; z-index: 200;
 }
 
@@ -234,7 +232,7 @@ select {
     font-size: 16px;
 }
 
-/* Checkbox */
+
 .checkbox-group {
     display: flex;
     align-items: center;
@@ -246,7 +244,7 @@ select {
 .checkbox-group input { margin-right: 15px; transform: scale(1.5); cursor: pointer; }
 .checkbox-group label { margin: 0; cursor: pointer; color: #ddd; }
 
-/* Przyciski */
+
 button {
     background: linear-gradient(135deg, #444, #222);
     border: 1px solid #555;
@@ -269,14 +267,14 @@ button:hover { background: #555; border-color: #777; }
 .big-btn:hover { background: #0088ff; }
 .small-btn { padding: 10px; font-size: 14px; background: transparent; border: 1px solid #444; margin-top: 20px; }
 
-/* Statystyki */
+
 .stats { margin: 25px 0; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 4px; }
 .stat-row { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding: 8px 0; font-size: 14px; }
 .red-txt { color: #ff5555; }
 .blue-txt { color: #5555ff; }
 
 
-/* --- EFEKTY SKLEPU (PARTICLES) --- */
+
 .shop-particle {
     position: absolute;
     width: 6px;
@@ -293,7 +291,7 @@ button:hover { background: #555; border-color: #777; }
     100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
 }
 
-/* Styl dla wyszarzonego/maksymalnego przycisku */
+
 .buy-btn:disabled {
     background: #222;
     color: #888;
@@ -301,9 +299,8 @@ button:hover { background: #555; border-color: #777; }
     cursor: not-allowed;
 }
 
-/* --- Animacje interfejsu --- */
 #menu-wrapper {
-    transition: opacity 0.8s ease-out; /* Płynne znikanie */
+    transition: opacity 0.8s ease-out;
 }
 
 .fade-out {
@@ -311,34 +308,34 @@ button:hover { background: #555; border-color: #777; }
     pointer-events: none;
 }
 
-/* --- NOWY, SZYBKI LOADING SCREEN (Minimalistyczny) --- */
+
 #loading-screen {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: #050505; /* Prawie czarne tło */
+    background-color: #050505;
     z-index: 9999;
     display: flex;
     justify-content: center;
     align-items: center;
     opacity: 1;
-    transition: opacity 0.5s ease-out; /* Szybkie znikanie (0.5s) */
+    transition: opacity 0.5s ease-out;
 }
 
-/* Klasa dodawana przez JS, żeby ukryć ekran */
+
 #loading-screen.hidden {
     opacity: 0;
     pointer-events: none;
 }
 
-/* Nowoczesny spinner (pierścień) */
+
 .spinner-ring {
     width: 60px;
     height: 60px;
-    border: 4px solid rgba(68, 255, 68, 0.1); /* Ciemna zieleń */
-    border-top: 4px solid #44ff44; /* Jasna zieleń */
+    border: 4px solid rgba(68, 255, 68, 0.1);
+    border-top: 4px solid #44ff44;
     border-radius: 50%;
     animation: spinRing 0.8s linear infinite;
     box-shadow: 0 0 15px rgba(68, 255, 68, 0.2);
@@ -349,9 +346,7 @@ button:hover { background: #555; border-color: #777; }
     100% { transform: rotate(360deg); }
 }
 
-/* --- POPRAWKI DO CREDITS (WOLNIEJSZE) --- */
-/* Znajdź istniejącą klasę .credits-content i upewnij się, że ma te właściwości, 
-   szczególnie animację startującą z top: 100% */
+
 .credits-content {
     position: absolute;
     width: 100%;
@@ -360,13 +355,13 @@ button:hover { background: #555; border-color: #777; }
     top: 100%; 
 }
 
-/* Podmień kluczową animację scrollText na tę wersję */
+
 @keyframes scrollText {
     0% { top: 100%; transform: scale(0.9); opacity: 0; }
     5% { opacity: 1; }
     100% { top: -150%; transform: scale(1); opacity: 1; } 
 }
-/* --- COPYRIGHT & CREDITS --- */
+
 
 #copyright-trigger {
     position: fixed;
@@ -385,9 +380,7 @@ button:hover { background: #555; border-color: #777; }
     text-shadow: 0 0 5px #44ff44;
 }
 
-/* --- HOLLYWOOD CREDITS STYLE --- */
 
-/* Overlay (tło) */
 #credits-overlay {
     position: fixed;
     top: 0;
@@ -396,7 +389,7 @@ button:hover { background: #555; border-color: #777; }
     height: 100%;
     background: radial-gradient(circle, rgba(20,20,30,0.95) 0%, rgba(0,0,0,1) 100%);
     z-index: 8000;
-    display: none; /* JS to włączy */
+    display: none;
     opacity: 0;
     transition: opacity 0.5s ease;
     justify-content: center;
@@ -417,29 +410,27 @@ button:hover { background: #555; border-color: #777; }
 }
 #close-credits:hover { color: #ff5555; transform: scale(1.2) rotate(90deg); }
 
-/* Kontener z perspektywą 3D */
+
 .credits-wrapper {
     position: relative;
-    width: 100%; /* Szerokość na maxa */
-    max-width: 800px; /* Ale żeby tekst nie był za szeroki na dużych ekranach */
+    width: 100%;
+    max-width: 800px; 
     height: 100%;
     overflow: hidden;
-    /* Usunięte perspective */
     mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
     -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 15%, black 85%, transparent 100%);
 }
 
-/* Sama treść napisów */
+
 .credits-content {
     position: absolute;
-    top: 100%; /* Start poza ekranem na dole */
+    top: 100%;
     width: 100%;
     text-align: center;
     color: #fff;
-    /* Usunięte transform: rotateX(...) */
 }
 
-/* Typografia "Kinowa" */
+
 .credits-content h1 {
     font-size: 60px;
     color: #44ff44;
@@ -477,7 +468,6 @@ button:hover { background: #555; border-color: #777; }
     font-weight: 300;
 }
 
-/* Informacja o przyspieszaniu */
 #speed-hint {
     position: absolute;
     bottom: 20px;

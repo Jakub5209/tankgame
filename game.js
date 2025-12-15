@@ -1,13 +1,7 @@
-// --- USTAWIENIA GRY ---
 
-// KONFIGURACJA AUDIO
-// Możesz podać pojedynczą ścieżkę: 'sounds/music.mp3'
-// Lub listę ścieżek (gra wybierze losowo): ['sounds/bang1.mp3', 'sounds/bang2.mp3']
-// Lub 'none', aby wyłączyć.
 
 const audioPaths = {
-    // Efekty dźwiękowe
-    shoot:            ['audio/shoot.wav'], // Np. ['sfx/shoot1.mp3', 'sfx/shoot2.mp3']
+    shoot:            ['audio/shoot.wav'],
     ricochet:         ['audio/ricochet.wav'],
     explosion:        ['audio/explosion.wav'],
     missileLaunch:    ['audio/missle-launch.wav'],
@@ -16,9 +10,8 @@ const audioPaths = {
     powerup:          ['audio/powerup.mp3', 'audio/powerup2.wav', 'audio/powerup3.wav', 'audio/powerup4.wav'],
     win:              ['audio/win.mp3'],
     
-    // Muzyka
-    menuMusic:        ['audio/menu.mp3'], // Muzyka w menu głównym
-    gameMusic:        ['audio/game.mp3', 'audio/game2.mp3']  // Muzyka podczas walki
+    menuMusic:        ['audio/menu.mp3'],
+    gameMusic:        ['audio/game.mp3', 'audio/game2.mp3']
 };
 
 const config = {
@@ -36,7 +29,7 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-// Zmienne globalne
+
 let player1, player2;
 let keys, keysP2;
 let bullets, missiles, walls, powerUps, coins;
@@ -48,19 +41,18 @@ let lastCheckedMapId = 1;
 let isInputBlocked = false;
 
 let gameSettings = { ricochet: false, mapId: 1 };
-const ENABLE_MAP_ANIMATION = true; // Zmień na false, aby wyłączyć animację mapy
+const ENABLE_MAP_ANIMATION = true;
 let stats = { p1Shots: 0, p2Shots: 0 };
 
-// DANE SKLEPU I GRACZA
-// Struktura zapisu w localStorage
+
 let playerData = {
     volume: 0.5,
     red: {
         coins: 0,
-        fireRateLvl: 0, // 0-5
-        maxHp: 1,       // 1-3
+        fireRateLvl: 0,
+        maxHp: 1,
         color: 0xff5555,
-        ownedColors: [0xff5555] // Lista kupionych kolorów
+        ownedColors: [0xff5555]
     },
     blue: {
         coins: 0,
@@ -71,31 +63,30 @@ let playerData = {
     }
 };
 
-// Definicje kosztów i wartości
+
 const UPGRADES = {
     rateCost: 10,
     hpCost: 20,
     colorCost: 25,
     maxRateLvl: 5,
     maxHp: 3,
-    baseFireRate: 600, // ms (im mniej tym szybciej)
-    rateStep: 80       // o ile szybciej na poziom
+    baseFireRate: 600,
+    rateStep: 80
 };
 
-// Palety kolorów do kupienia
+
 const PALETTES = {
     red: [0xff5555, 0xff0000, 0xff00ff, 0x800000, 0xffa500],
     blue: [0x5555ff, 0x0000ff, 0x00ffff, 0x2abd84, 0x10e325]
 };
 
-// --- ŁADOWANIE I ZAPIS (LOCAL STORAGE) ---
+
 
 window.onload = function() {
     loadData();
     initShopUI();
     updateShopUI();
 
-    // Obsługa suwaka głośności
     const slider = document.getElementById('music-slider');
     if (slider) {
         slider.value = playerData.volume;
@@ -105,50 +96,50 @@ window.onload = function() {
             if (currentMusic && currentMusic.isPlaying) {
                 currentMusic.setVolume(musicVolume);
             }
-            saveData(); // Zapisz volume od razu
+            saveData();
         });
     }
 
     setInterval(function checkMapSelectionAndUpdateGlobal() {
-        // Sprawdzamy widoczność menu - używamy 'main-menu' (zgodnie z index.html)
+
         const menuElement = document.getElementById('main-menu');
 
-        // Sprawdzamy, czy referencje są dostępne I czy menu jest widoczne (display: flex)
+
         if (menuElement.style.display == 'flex') {
             return;
         }
 
-        // Pobieramy aktualny wybór mapy z listy
+
         const mapSelectElement = document.getElementById('map-select');
         if (!mapSelectElement) return;
 
         const currentSelection = parseInt(mapSelectElement.value);
 
-        // Sprawdzamy, czy ID mapy się zmieniło
+
         if (currentSelection !== lastCheckedMapId) {
-            // Zmiana! Aktualizujemy
+
             
-            // 1. Zapisujemy nowy stan
+
             lastCheckedMapId = currentSelection;
             gameSettings.mapId = currentSelection;
             
-            // 2. Czyścimy stare ściany
+
             walls.clear(true, true); 
             
-            // 3. Rysujemy nową mapę (używając globalnych referencji)
+
             buildMapFromData(walls, this, gameSettings.mapId);
         }
-    }, 1000); // Sprawdzamy co 1000 milisekund (1 sekunda)
+    }, 1000);
 };
 
 function loadData() {
     const saved = localStorage.getItem('tank_duels_data');
     if (saved) {
         const parsed = JSON.parse(saved);
-        // Scalanie obiektów (żeby nowe pola nie popsuły starych zapisów)
+
         playerData = { ...playerData, ...parsed };
         
-        // Upewnij się, że obiekty podrzędne też są scalone
+
         playerData.red = { ...playerData.red, ...parsed.red };
         playerData.blue = { ...playerData.blue, ...parsed.blue };
     }
@@ -160,10 +151,10 @@ function saveData() {
     updateShopUI();
 }
 
-// --- LOGIKA SKLEPU ---
+
 
 function initShopUI() {
-    // Generowanie przycisków kolorów
+
     generateColorGrid('red');
     generateColorGrid('blue');
 }
@@ -178,10 +169,10 @@ function generateColorGrid(who) {
         box.className = 'color-box';
         box.style.backgroundColor = '#' + col.toString(16).padStart(6, '0');
         
-        // Kliknięcie w kolor
+
         box.onclick = () => tryBuyOrSelectColor(who, col);
         
-        // Oznaczanie (ID przypiszemy dynamicznie w updateShopUI)
+
         box.id = `col-${who}-${col}`;
         container.appendChild(box);
     });
@@ -191,11 +182,11 @@ function updateShopUI() {
     ['red', 'blue'].forEach(who => {
         const data = playerData[who];
         
-        // Coins
+
         document.getElementById(`shop-coins-${who}`).innerText = data.coins;
         
-        // --- Obsługa Fire Rate ---
-        const rateBtn = document.getElementById(`buy-rate-${who}`); // Używamy unikalnego ID
+
+        const rateBtn = document.getElementById(`buy-rate-${who}`);
         document.getElementById(`lvl-rate-${who}`).innerText = data.fireRateLvl;
         const percent = (data.fireRateLvl / UPGRADES.maxRateLvl) * 100;
         document.getElementById(`bar-rate-${who}`).style.width = `${percent}%`;
@@ -208,7 +199,7 @@ function updateShopUI() {
             rateBtn.disabled = false;
         }
 
-        // --- Obsługa HP ---
+
         const hpBtn = document.getElementById(`buy-hp-${who}`);
         document.getElementById(`val-hp-${who}`).innerText = data.maxHp;
 
@@ -220,7 +211,7 @@ function updateShopUI() {
             hpBtn.disabled = false;
         }
 
-        // Kolory
+
         PALETTES[who].forEach(col => {
             const box = document.getElementById(`col-${who}-${col}`);
             const isOwned = data.ownedColors.includes(col);
@@ -239,7 +230,7 @@ function updateShopUI() {
 
 function buyUpgrade(who, type) {
     const data = playerData[who];
-    // Pobieramy element przycisku z eventu (window.event działa w inline onclick)
+
     const btn = window.event.currentTarget; 
     
     if (type === 'rate') {
@@ -247,14 +238,14 @@ function buyUpgrade(who, type) {
             data.coins -= UPGRADES.rateCost;
             data.fireRateLvl++;
             saveData();
-            triggerShopConfetti(btn, '#00e676'); // Zielone konfetti
+            triggerShopConfetti(btn, '#00e676');
         }
     } else if (type === 'hp') {
         if (data.maxHp < UPGRADES.maxHp && data.coins >= UPGRADES.hpCost) {
             data.coins -= UPGRADES.hpCost;
             data.maxHp++;
             saveData();
-            triggerShopConfetti(btn, '#ff5555'); // Czerwone konfetti
+            triggerShopConfetti(btn, '#ff5555');
         }
     }
 }
@@ -274,14 +265,14 @@ function tryBuyOrSelectColor(who, colorInt) {
         data.ownedColors.push(colorInt);
         data.color = colorInt;
         saveData();
-        // Konfetti w kolorze kupionego skina
+
         triggerShopConfetti(box, '#' + colorInt.toString(16).padStart(6, '0')); 
     } else {
         alert("Za mało monet!");
     }
 }
 
-// Funkcja tworząca efekt cząsteczek w DOM (HTML)
+
 function triggerShopConfetti(element, color = 'gold') {
     const rect = element.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -294,7 +285,7 @@ function triggerShopConfetti(element, color = 'gold') {
         p.style.top = centerY + 'px';
         p.style.backgroundColor = color;
         
-        // Losowy kierunek
+
         const angle = Math.random() * Math.PI * 2;
         const velocity = 30 + Math.random() * 50;
         const tx = Math.cos(angle) * velocity + 'px';
@@ -309,52 +300,50 @@ function triggerShopConfetti(element, color = 'gold') {
 }
 
 
-// --- START GRY ---
+
 
 function startGame() {
-    // 1. Pobierz ustawienia
+
     gameSettings.ricochet = document.getElementById('ricochet-toggle').checked;
     gameSettings.speedMode = document.getElementById('speed-toggle').checked;
     gameSettings.mapId = parseInt(document.getElementById('map-select').value);
 
-    // 2. Animacja znikania MENU (UI)
+
     const menuWrapper = document.getElementById('menu-wrapper');
-    menuWrapper.classList.add('fade-out'); // Dodaje klasę z CSS (opacity: 0)
+    menuWrapper.classList.add('fade-out');
     document.getElementById('game-over-screen').style.display = 'none';
 
-    // --- NOWOŚĆ: Animacja znikania STAREJ MAPY ---
-    const scene = game.scene.scenes[0]; // Pobieramy aktywną scenę
+
+    const scene = game.scene.scenes[0];
     if (scene) {
-        // Jeśli istnieją ściany, animujemy ich zniknięcie (skala do 0)
+
         if (walls && walls.getChildren) {
             scene.tweens.add({
                 targets: walls.getChildren(),
                 scale: 0,
-                duration: 600, // Czas trwania (krótszy niż timeout poniżej)
+                duration: 600,
                 ease: 'Back.in'
             });
         }
-        // Opcjonalnie: ukrywamy też czołgi, żeby nie wisiały w powietrzu
+
         if (player1 && player1.active) scene.tweens.add({ targets: player1, scale: 0, duration: 400 });
         if (player2 && player2.active) scene.tweens.add({ targets: player2, scale: 0, duration: 400 });
     }
 
-    // 3. Restart gry po zakończeniu animacji
-    // Czekamy 800ms (czas transition menu w CSS), co wystarczy też na animację ścian (600ms)
+
     setTimeout(() => {
-        // Ukrywamy menu całkowicie (display: none)
+
         menuWrapper.style.display = 'none';
-        menuWrapper.classList.remove('fade-out'); // Reset klasy na przyszłość (np. po Game Over)
+        menuWrapper.classList.remove('fade-out');
         
-        // Twardy reset sceny -> to wywoła create(), które zbuduje nową mapę z animacją
         if(scene) scene.scene.restart();
     }, 800);
 }
 
 function showMenu() {
-    updateShopUI(); // Odśwież monety po grze
+    updateShopUI();
     document.getElementById('game-over-screen').style.display = 'none';
-    document.getElementById('menu-wrapper').style.display = 'flex'; // Flex, bo wrapper
+    document.getElementById('menu-wrapper').style.display = 'flex';
     
     const scene = game.scene.getScene('default');
     if(scene) playMusic(scene, 'menuMusic');
@@ -364,7 +353,7 @@ function restartMatch() {
     startGame();
 }
 
-// --- SILNIK PHASER ---
+
 
 function preload() {
     for (const [key, value] of Object.entries(audioPaths)) {
@@ -376,7 +365,7 @@ function preload() {
     }
 }
 
-// Helpersy Audio
+
 function playSound(scene, key) {
     const configValue = audioPaths[key];
     if (!configValue || configValue === 'none') return;
@@ -386,7 +375,7 @@ function playSound(scene, key) {
         const randomIndex = Phaser.Math.Between(0, validPaths.length - 1);
         const assetKey = `${key}_${randomIndex}`;
         if (scene.sound.get(assetKey) || scene.cache.audio.exists(assetKey)) {
-             scene.sound.play(assetKey, { volume: 0.8 }); // SFX głośność
+             scene.sound.play(assetKey, { volume: 0.8 });
         }
     }
 }
@@ -421,12 +410,10 @@ function create() {
 
     walls = this.physics.add.staticGroup();
     
-    // --- ZMIANA: Warunkowe budowanie mapy ---
-    // Jeśli menu było widoczne (czyli to start gry), użyj animacji (jeśli włączona w configu)
-    // Sprawdzamy czy to "świeży start" po restarcie sceny
+
     const shouldUseAnimation = ENABLE_MAP_ANIMATION && !document.getElementById('menu-wrapper').style.display.includes('flex');
 
-    // TWORZENIE CZOŁGÓW
+
     const p1Delay = Math.max(150, UPGRADES.baseFireRate - (playerData.red.fireRateLvl * UPGRADES.rateStep));
     const p2Delay = Math.max(150, UPGRADES.baseFireRate - (playerData.blue.fireRateLvl * UPGRADES.rateStep));
 
@@ -445,27 +432,23 @@ function create() {
     setupCollisions(this);
     setupInputs(this);
 
-    // Sprawdzamy czy jesteśmy w trybie menu (po wczytaniu strony) czy gry
-    // Uwaga: Funkcja startGame ukrywa menu zanim tu wejdziemy, więc sprawdzanie display może być mylące.
-    // Lepsza logika:
-    
-    // Jeśli właśnie wcisnęliśmy start (czyli menu jest ukryte)
+
     const isGameplay = document.getElementById('menu-wrapper').style.display === 'none';
 
     if (!isGameplay) {
-        // Jesteśmy w menu (tło gry, czołgi stoją)
-        buildMapFromData(walls, this, gameSettings.mapId); // Buduj normalnie
+
+        buildMapFromData(walls, this, gameSettings.mapId);
         playMusic(this, 'menuMusic');
         isInputBlocked = true; 
     } else {
-        // Rozpoczynamy rozgrywkę
+
         playMusic(this, 'gameMusic');
         
         if (shouldUseAnimation) {
-             // Buduj z animacją, countdown odpali się po zakończeniu
+
             buildMapWithAnimation(walls, this, gameSettings.mapId, () => startCountdown(this));
         } else {
-            // Buduj natychmiast
+
             buildMapFromData(walls, this, gameSettings.mapId);
             startCountdown(this);
         }
@@ -502,14 +485,14 @@ function startCountdown(scene) {
 function update(time, delta) {
     if (isGameOver || isInputBlocked) return;
 
-    // Sterowanie Gracza 1 (WASD)
+
     moveTank(this, player1, keys.w, keys.s, keys.a, keys.d);
     if (keys.space.isDown) tryFire(this, player1, 'red', time);
 
-    // Sterowanie Gracza 2 (STRZAŁKI) - ZMIANA: Używamy keysP2 zamiast cursors
+
     moveTank(this, player2, keysP2.up, keysP2.down, keysP2.left, keysP2.right);
     
-    // Strzelanie Gracza 2 (Myszka lub dodaj klawisz do keysP2 np. Enter)
+
     if (this.input.activePointer.isDown) tryFire(this, player2, 'blue', time);
 
     updateShieldEffect(player1);
@@ -537,43 +520,43 @@ function update(time, delta) {
     });
 }
 
-// --- FIZYKA I LOGIKA HP ---
+
 
 function setupCollisions(scene) {
     scene.physics.add.collider([player1, player2], walls);
     scene.physics.add.collider(player1, player2);
 
-    // KOLIZJA KULI ZE ŚCIANĄ (Tu jest logika Breakera)
+
     scene.physics.add.collider(bullets, walls, (bullet, wall) => {
         if (!bullet.active) return;
         
-        // Jeśli to Wall Breaker
+
         if (bullet.getData('isBreaker')) {
-            playSound(scene, 'explosion'); // Dźwięk wybuchu
-            createSparks(wall.x, wall.y, 0xaaaaaa); // Szare iskry (gruz)
-            wall.destroy(); // Zniszcz ścianę
-            recycleBullet(bullet); // Zniszcz kulę
+            playSound(scene, 'explosion');
+            createSparks(wall.x, wall.y, 0xaaaaaa);
+            wall.destroy();
+            recycleBullet(bullet);
             return;
         }
 
-        // Standardowe zachowanie
+
         if (gameSettings.ricochet) {
             playSound(scene, 'ricochet');
             createSparks(bullet.x, bullet.y, 0xffff00);
         } else {
-            // --- ZMIANA: Dodano efekty dla trybu bez rykoszetu ---
-            createSparks(bullet.x, bullet.y, 0xffff00); // Żółte iskry jak przy rykoszecie
+
+            createSparks(bullet.x, bullet.y, 0xffff00);
             recycleBullet(bullet);
         }
     });
 
     scene.physics.add.collider(missiles, walls, (m) => { if(m.active) createSparks(m.x, m.y, 0xffaa00); });
     
-    // Obsługa wyjścia poza mapę (World Bounds)
+
     scene.physics.world.on('worldbounds', (body) => {
         const obj = body.gameObject;
         if (obj && obj.getData && obj.getData('isBullet') && obj.active) {
-            // Breaker niszczy się na granicy mapy
+
             if (obj.getData('isBreaker')) {
                 recycleBullet(obj);
                 return;
@@ -610,9 +593,9 @@ function createTank(scene, x, y, texture, id, color, hp, fireRate) {
     tank.body.setSize(30, 30);
     tank.setTint(color); 
     
-    // LOGIKA SPEED MODE
-    const baseSpeed = gameSettings.speedMode ? 400 : 220; // 400 to bardzo szybko
-    const rotSpeed = gameSettings.speedMode ? 350 : 220;
+
+    const baseSpeed = gameSettings.speedMode ? 400 : 220;
+    const rotSpeed = gameSettings.speedMode ? 350 : 320;
 
     tank.setData({ 
         id: id, 
@@ -625,7 +608,7 @@ function createTank(scene, x, y, texture, id, color, hp, fireRate) {
         lastFired: 0,
         hp: hp,           
         hasShield: false,
-        hasBreaker: 0, // Inicjalizacja nowej flagi
+        hasBreaker: 0,
         shieldVisual: null,
         nextShotIsMissile: false 
     });
@@ -635,7 +618,7 @@ function createTank(scene, x, y, texture, id, color, hp, fireRate) {
 function handleHit(player, bullet) {
     if (!player.active) return;
     
-    // Grace Period dla własnych kul (bez zmian)
+
     if (bullet.getData && bullet.getData('owner') === player.getData('id')) {
         const currentTime = player.scene.time.now;
         const spawnTime = bullet.getData('spawnTime') || 0;
@@ -646,7 +629,7 @@ function handleHit(player, bullet) {
 
     const scene = player.scene;
 
-    // Tarcza (bez zmian)
+
     if (player.getData('hasShield')) {
         playSound(scene, 'ricochet');
         createSparks(player.x, player.y, 0x00ffff);
@@ -658,14 +641,13 @@ function handleHit(player, bullet) {
 
     if (bullet.active && bullet.disableBody) recycleBullet(bullet);
 
-    // --- NAPRAWA BUGA Z PRZYCIEMNIENIEM ---
-    // 1. Natychmiast przerwij wszystkie trwające animacje na graczu (mruganie)
-    scene.tweens.killTweensOf(player);
-    // 2. Przywróć pełną widoczność, żeby czołg nie został "ciemny"
-    player.setAlpha(1); 
-    player.setScale(1); // Na wszelki wypadek resetujemy też skalę
 
-    // LOGIKA ŻYCIA (HP)
+    scene.tweens.killTweensOf(player);
+
+    player.setAlpha(1); 
+    player.setScale(1);
+
+
     let hp = player.getData('hp');
     hp--;
     player.setData('hp', hp);
@@ -695,7 +677,7 @@ function handleHit(player, bullet) {
         createSparks(player.x, player.y, 0xff0000);
         showHearts(scene, player, hp); 
         
-        // Animacja mrugania - teraz bezpieczna, bo poprzednia została usunięta wyżej
+
         scene.tweens.add({
             targets: player, 
             alpha: 0.2, 
@@ -703,7 +685,6 @@ function handleHit(player, bullet) {
             yoyo: true, 
             repeat: 3,
             onComplete: () => {
-                // Dla pewności upewniamy się, że po animacji wraca do 1
                 if(player.active) player.setAlpha(1);
             }
         });
@@ -713,18 +694,18 @@ function handleHit(player, bullet) {
 function showHearts(scene, player, hpCount) {
     const hearts = [];
     
-    // Tworzymy serca (pozycja startowa nie ma znaczenia, bo zaraz update to poprawi)
+
     for(let i=0; i<hpCount; i++) {
         let h = scene.add.text(0, 0, '❤️', { fontSize: '20px', resolution: 2 }).setOrigin(0.5);
         hearts.push(h);
     }
 
-    // Zapisujemy referencje w graczu, żeby update() mógł je przesuwać
+
     player.setData('activeHearts', hearts);
 
-    // Znikają po 1.5 sekundy
+
     scene.time.delayedCall(1500, () => {
-        // Sprawdzamy, czy te serca wciąż są "aktualne" (czy nie zostały nadpisane przez kolejny hit)
+
         const currentHearts = player.getData('activeHearts');
         if (currentHearts === hearts) { 
             hearts.forEach(h => h.destroy());
@@ -770,22 +751,22 @@ function tryFire(scene, player, colorId, time) {
     
     const bullet = bullets.get(mx, my);
     if (bullet) {
-        // ZABEZPIECZENIE: Dla pewności czyścimy tweeny też przy pobraniu
+
         scene.tweens.killTweensOf(bullet);
 
         player.setData('activeAmmo', player.getData('activeAmmo') + 1);
         bullet.setActive(true).setVisible(true);
         bullet.enableBody(true, mx, my, true, true);
         
-        // Resetujemy wygląd (ważne po rykoszetach, które zmieniają alpha)
+
         bullet.setAlpha(1);
         bullet.setRotation(player.rotation);
         
         bullet.setData('owner', colorId);
         bullet.setData('isBullet', true);
-        bullet.setData('spawnTime', time); // Zapisujemy czas startu dla handleHit
+        bullet.setData('spawnTime', time);
         
-        // --- LOGIKA WALL BREAKER ---
+
         let currentBreakerAmmo = player.getData('breakerAmmo');
         const isBreaker = currentBreakerAmmo > 0;
         
@@ -804,7 +785,7 @@ function tryFire(scene, player, colorId, time) {
             bullet.setCollideWorldBounds(true);
             bullet.body.onWorldBounds = true;
         } else {
-            // Standardowy pocisk
+
             bullet.setTexture('bullet');
             bullet.setTint(player.getData('colorHex'));
             bullet.setScale(1);
@@ -813,7 +794,7 @@ function tryFire(scene, player, colorId, time) {
                 bullet.setBounce(1).setCollideWorldBounds(true);
                 bullet.body.onWorldBounds = true;
                 
-                // Tutaj tworzymy animację, którą musimy zabić w recycleBullet!
+
                 scene.tweens.add({ 
                     targets: bullet, 
                     alpha: 0, 
@@ -833,8 +814,7 @@ function tryFire(scene, player, colorId, time) {
         if(colorId === 'red') stats.p1Shots++; else stats.p2Shots++;
     }
 }
-// ... Funkcje Rakiety bez zmian, poza zmianą textury w createDetailedGraphics ...
-// Kopiuj fireMissile i updateMissileLogic ze starego kodu (są bez zmian logicznych)
+
 
 function fireMissile(scene, player, colorId, time) {
     player.setData('nextShotIsMissile', false); 
@@ -860,8 +840,7 @@ function fireMissile(scene, player, colorId, time) {
         missile.body.velocity.x = 0;
         missile.body.velocity.y = 0;
         
-        // Speed Mode dla rakiety
-        const missileSpeed = gameSettings.speedMode ? 400 : 220;
+        const missileSpeed = gameSettings.speedMode ? 400 : 215;
         scene.physics.velocityFromRotation(player.rotation, missileSpeed, missile.body.velocity);
     }
 }
@@ -926,26 +905,23 @@ function updateMissileLogic(missile, time) {
 function recycleBullet(bullet) {
     if (!bullet.active) return;
     
-    const scene = bullet.scene; // Pobieramy scenę z kuli
+    const scene = bullet.scene;
 
-    // --- KLUCZOWA POPRAWKA ---
-    // Zatrzymujemy wszelkie animacje (Tweens) działające na tej kuli.
-    // Dzięki temu stary timer z poprzedniego strzału nie zabije nowej kuli.
     scene.tweens.killTweensOf(bullet);
 
     const ownerId = bullet.getData('owner');
     let owner = (ownerId === 'red') ? player1 : player2;
     
-    // Oddajemy amunicję właścicielowi
+
     if (owner && owner.active) {
         let currentAmmo = owner.getData('activeAmmo');
         if (currentAmmo > 0) owner.setData('activeAmmo', currentAmmo - 1);
     }
 
-    bullet.disableBody(true, true); // Wyłącz fizykę i ukryj
+    bullet.disableBody(true, true);
     bullet.setActive(false);
     bullet.setVisible(false);
-    bullet.setAlpha(1); // Resetujemy przezroczystość na przyszłość
+    bullet.setAlpha(1);
 }
 
 function updateShieldEffect(player) {
@@ -964,20 +940,20 @@ function updateShieldEffect(player) {
     }
 }
 
-// --- ZBIERANIE ---
+
 
 function spawnRandomPowerUp() {
     if(isGameOver) return;
     const pos = getValidSpawnPoint();
     if(pos) {
-        // Zwiększamy zakres losowania do 3 (0, 1, 2, 3)
         const typeId = Phaser.Math.Between(0, 3);
         
         let textureKey, typeStr;
         if (typeId === 0) { textureKey = 'pu_double'; typeStr = 'double'; }
         else if (typeId === 1) { textureKey = 'pu_shield'; typeStr = 'shield'; }
         else if (typeId === 2) { textureKey = 'pu_missile'; typeStr = 'missile'; }
-        else { textureKey = 'pu_breaker'; typeStr = 'breaker'; } // Nowy typ
+        else if (typeId === 3) { textureKey = 'pu_health'; typeStr = 'health'; }
+        else { textureKey = 'pu_breaker'; typeStr = 'breaker'; }
 
         const pu = powerUps.create(pos.x, pos.y, textureKey);
         pu.setData('type', typeStr).setScale(0);
@@ -1016,7 +992,6 @@ function collectCoin(player, coin) {
     showFloatingText(player.scene, coin.x, coin.y - 20, "+1 COIN", 0xffd700);
     coin.destroy();
 
-    // Dodawanie monet do odpowiedniego portfela
     const id = player.getData('id');
     playerData[id].coins += 1;
     saveData();
@@ -1044,7 +1019,7 @@ function collectPowerUp(player, powerUp) {
     } else if (type === 'shield') {
         player.setData('hasShield', true);
         if(player.getData('timerShield')) player.getData('timerShield').remove();
-        const timer = scene.time.delayedCall(7000, () => {
+        const timer = scene.time.delayedCall(6000, () => {
             if(player.active) player.setData('hasShield', false);
         });
         player.setData('timerShield', timer);
@@ -1055,12 +1030,29 @@ function collectPowerUp(player, powerUp) {
         showFloatingText(scene, player.x, player.y - 40, "MISSILE READY!", 0xff5500);
         
     } else if (type === 'breaker') { 
-        // --- ZMIANA: 3 strzały zamiast timera ---
+
         player.setData('breakerAmmo', 3);
-        // Usuwamy stary timer jeśli istniał, żeby nie mieszał
+
         if(player.getData('timerBreaker')) player.getData('timerBreaker').remove();
         
         showFloatingText(scene, player.x, player.y - 40, "BREAKER: 3 SHOTS!", 0xaa00aa);
+
+    } else if (type === 'health') {
+        let currentHp = player.getData('hp');
+
+        const maxHp = playerData[player.getData('id')].maxHp;
+
+        if (currentHp < maxHp) {
+
+            player.setData('hp', currentHp + 1);
+            
+
+            showFloatingText(scene, player.x, player.y - 40, "+1 HP!", 0x00ff00);
+            
+            showHearts(scene, player, currentHp + 1);
+        } else {
+            showFloatingText(scene, player.x, player.y - 40, "MAX HP!", 0xcccccc);
+        }
     }
 }
 
@@ -1073,7 +1065,7 @@ function showFloatingText(scene, x, y, msg, color) {
     scene.tweens.add({ targets: txt, y: y - 30, alpha: 0, duration: 1500, onComplete: () => txt.destroy() });
 }
 
-// --- GRAFIKA I EFEKTY ---
+
 
 function createParticleSystems(scene) {
     bulletEmitter = scene.add.particles(0, 0, 'particle', {
@@ -1106,7 +1098,7 @@ function finishGame(winnerId) {
     
     game.scene.scenes[0].time.removeAllEvents();
     
-    // Dodaj bonusowe monety za wygraną
+
     if(winnerId === 'red') playerData.red.coins += 5; 
     else playerData.blue.coins += 5;
     saveData();
@@ -1139,15 +1131,15 @@ function buildMapFromData(wallsGroup, scene, mapId) {
 function createDetailedGraphics(scene) {
     const g = scene.make.graphics({x: 0, y: 0, add: false});
 
-    // Czołg Base
+
     drawTankModel(g, 0x888888, 0xffffff); 
     g.generateTexture('tankBase', 40, 40);
 
-    // Ściana
+
     g.clear(); g.fillStyle(0xffffff, 1); g.fillRect(0, 0, 40, 40); g.fillStyle(0xdddddd, 1); g.fillRect(2, 2, 36, 36); g.fillStyle(0xeeeeee, 1); g.fillCircle(20, 20, 4); 
     g.generateTexture('wall', 40, 40);
 
-    // Pocisk i cząsteczka
+
     g.clear(); g.fillStyle(0xffffff, 1); g.fillCircle(5, 5, 5); 
     g.generateTexture('bullet', 10, 10); 
     g.generateTexture('particle', 10, 10);
@@ -1156,7 +1148,13 @@ function createDetailedGraphics(scene) {
         g.clear(); g.lineStyle(2, 0xffffff, 1); g.fillStyle(color, 0.8); g.fillRect(0, 0, 30, 30); g.strokeRect(0, 0, 30, 30); symbolFn();
     }
     
-    // --- POWERUPY ---
+    drawBox(0x00cc00, () => { 
+        g.fillStyle(0xffffff, 1); 
+        g.fillRect(13, 8, 4, 14);
+        g.fillRect(8, 13, 14, 4);
+    }); 
+    g.generateTexture('pu_health', 30, 30);
+
     // Double Ammo
     drawBox(0xaaaa00, () => { g.fillStyle(0xffffff, 1); g.fillCircle(10, 15, 4); g.fillCircle(20, 15, 4); }); g.generateTexture('pu_double', 30, 30);
     // Shield
@@ -1164,13 +1162,12 @@ function createDetailedGraphics(scene) {
     // Missile
     drawBox(0xaa4400, () => { g.fillStyle(0xffffff, 1); g.fillTriangle(15, 5, 25, 25, 5, 25); }); g.generateTexture('pu_missile', 30, 30);
     
-    // [NOWE] Wall Breaker (Fioletowy z kwadratem)
     drawBox(0x800080, () => { g.fillStyle(0xffffff, 1); g.fillRect(8, 8, 14, 14); }); g.generateTexture('pu_breaker', 30, 30);
 
-    // Ikona tarczy na czołgu
+
     g.clear(); g.lineStyle(4, 0x00ffff, 1); g.strokeCircle(25, 25, 20); g.generateTexture('shieldIcon', 50, 50);
     
-    // Rakieta
+
     g.clear(); g.fillStyle(0xffaa00, 1); g.fillRect(0, 0, 16, 6); g.fillStyle(0xff0000, 1); g.fillRect(0, 0, 4, 6); g.fillStyle(0xffffff, 1); g.fillTriangle(16, 0, 16, 6, 22, 3); g.generateTexture('missile', 22, 6);
 
     // Coin
@@ -1179,18 +1176,18 @@ function createDetailedGraphics(scene) {
 
 function drawTankModel(g, darkColor, lightColor) {
     g.clear(); 
-    // Gąsienice
+
     g.fillStyle(0x111111, 1); g.fillRect(0, 0, 40, 8); g.fillRect(0, 32, 40, 8); 
-    // Kadłub (teraz neutralny)
+
     g.fillStyle(darkColor, 1); g.fillRect(4, 8, 32, 24); 
-    // Wieżyczka (teraz neutralna)
+
     g.fillStyle(lightColor, 1); g.fillCircle(20, 20, 9); 
-    // Lufa
+
     g.fillStyle(0x222222, 1); g.fillRect(24, 16, 16, 8);
 }
 
 function setupInputs(scene) {
-    // Klawisze dla Gracza 1 (Czerwony) - WASD + Spacja
+
     keys = scene.input.keyboard.addKeys({
         w: Phaser.Input.Keyboard.KeyCodes.W,
         s: Phaser.Input.Keyboard.KeyCodes.S,
@@ -1200,8 +1197,7 @@ function setupInputs(scene) {
         shift: Phaser.Input.Keyboard.KeyCodes.SHIFT
     });
 
-    // Klawisze dla Gracza 2 (Niebieski) - Strzałki + Enter (lub Myszka jak wolisz)
-    // Tworzymy to jako osobny obiekt, żeby nie kolidowało z WASD
+
     keysP2 = scene.input.keyboard.addKeys({
         up: Phaser.Input.Keyboard.KeyCodes.UP,
         down: Phaser.Input.Keyboard.KeyCodes.DOWN,
@@ -1209,8 +1205,7 @@ function setupInputs(scene) {
         right: Phaser.Input.Keyboard.KeyCodes.RIGHT
     });
     
-    // Zachowujemy kursory tylko jako fallback, jeśli gdzieś jeszcze ich używasz, 
-    // ale sterowanie opieramy na keysP2
+
     cursors = scene.input.keyboard.createCursorKeys();
 }
 
@@ -1218,29 +1213,28 @@ function buildMapWithAnimation(wallsGroup, scene, mapId, onCompleteCallback) {
     const layout = mapLayouts[mapId] || mapLayouts[1];
     let createdWalls = [];
 
-    // 1. Stwórz wszystkie ściany, ale ukryte (scale = 0)
+
     for (let y = 0; y < layout.length; y++) {
         for (let x = 0; x < layout[y].length; x++) {
             const cell = layout[y][x];
             if (cell !== 0) {
                 const wall = wallsGroup.create(x * 40 + 20, y * 40 + 20, 'wall');
                 if (cell > 1) wall.setTint(cell);
-                wall.setScale(0); // Startujemy od zera
+                wall.setScale(0);
                 
-                // Dodajemy do listy z informacją o pozycji X (żeby animować od lewej)
+
                 createdWalls.push({ sprite: wall, gridX: x, gridY: y });
             }
         }
     }
 
-    // 2. Animacja "fali"
+
     if (createdWalls.length === 0) {
         if(onCompleteCallback) onCompleteCallback();
         return;
     }
 
-    // Sortujemy, chociaż gridowe podejście w tweenie jest lepsze.
-    // Użyjemy delay w oparciu o pozycję X.
+
     
     scene.tweens.add({
         targets: createdWalls.map(w => w.sprite),
@@ -1248,16 +1242,12 @@ function buildMapWithAnimation(wallsGroup, scene, mapId, onCompleteCallback) {
         duration: 300,
         ease: 'Back.out',
         delay: (target, targetKey, value, targetIndex, totalTargets, tween) => {
-            // Znajdźmy obiekt w naszej liście, żeby znać jego X
-            // Phaser przekazuje sam sprite jako target.
-            // Prościej: delay obliczamy na podstawie współrzędnej X sprite'a
+
             const gridX = (target.x - 20) / 40;
-            return gridX * 50; // 50ms opóźnienia na każdą kolumnę
+            return gridX * 50;
         },
         onStart: (tween, targets) => {
-             // Opcjonalnie: dźwięk budowania przy starcie każdej kolumny?
-             // To by było dużo dźwięków. Może jeden dźwięk "futurystyczny" na start?
-             playSound(scene, 'coin'); // Dźwięk startu budowania
+             playSound(scene, 'coin');
         },
         onComplete: () => {
             if(onCompleteCallback) onCompleteCallback();
