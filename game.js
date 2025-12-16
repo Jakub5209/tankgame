@@ -946,7 +946,7 @@ function spawnRandomPowerUp() {
     if(isGameOver) return;
     const pos = getValidSpawnPoint();
     if(pos) {
-        const typeId = Phaser.Math.Between(0, 3);
+        const typeId = Phaser.Math.Between(0, 4);
         
         let textureKey, typeStr;
         if (typeId === 0) { textureKey = 'pu_double'; typeStr = 'double'; }
@@ -1253,4 +1253,5 @@ function buildMapWithAnimation(wallsGroup, scene, mapId, onCompleteCallback) {
             if(onCompleteCallback) onCompleteCallback();
         }
     });
+
 }
